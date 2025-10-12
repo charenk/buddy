@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figma AI Buddy</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .status {
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .endpoint {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 0.75rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            margin: 0.5rem 0;
+        }
+        .success {
+            color: #059669;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Figma AI Buddy</h1>
+        <p>AI design critique assistant for Figma comments</p>
+    </div>
+
+    <div class="status">
+        <h2 class="success">✅ Deployment Successful!</h2>
+        <p>Your Figma AI buddy is now live and ready to receive webhook requests.</p>
+    </div>
+
+    <h2>API Endpoints</h2>
+    <div class="endpoint">
+        <strong>Webhook Endpoint:</strong><br>
+        POST /api/figma-webhook
+    </div>
+    <div class="endpoint">
+        <strong>Test Endpoint:</strong><br>
+        GET /api/hello
+    </div>
+
+    <h2>How to Use</h2>
+    <ol>
+        <li>Set up a Figma webhook to point to: <code>https://buddy-lac-five.vercel.app/api/figma-webhook</code></li>
+        <li>Comment <code>@buddy</code> on any Figma frame</li>
+        <li>Buddy will analyze the frame and reply with design critique</li>
+    </ol>
+
+    <h2>Environment Status</h2>
+    <ul>
+        <li>✅ OpenAI API configured</li>
+        <li>✅ Figma PAT configured</li>
+        <li>✅ Supabase logging configured</li>
+        <li>⏳ Figma webhook subscription (pending setup)</li>
+    </ul>
+
+    <script>
+        // Test API endpoints
+        fetch('/api/hello')
+            .then(response => response.json())
+            .then(data => {
+                console.log('API test successful:', data);
+            })
+            .catch(error => {
+                console.log('API test failed:', error);
+            });
+    </script>
+</body>
+</html>
