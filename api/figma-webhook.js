@@ -87,7 +87,6 @@ async function replyToComment(fileKey, commentId, message) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      comment_id: commentId,
       message: message
     })
   });
