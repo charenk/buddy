@@ -9,7 +9,7 @@ export async function exportNodePng(fileKey: string, nodeId: string, scale = 2) 
   const url = `${BASE}/images/${fileKey}?ids=${encodeURIComponent(nodeId)}&format=png&scale=${scale}`;
   const res = await fetch(url, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Figma export failed: ${res.status}`);
-  const data = await res.json();
+  const data = await res.json() as { images?: Record<string, string> };
   const imageUrl = data.images?.[nodeId];
   if (!imageUrl) throw new Error('No image URL returned');
   return imageUrl; // ephemeral CDN URL
