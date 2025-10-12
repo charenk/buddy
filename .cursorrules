@@ -1,0 +1,28 @@
+# Cursor Rules for Figma AI Buddy Project
+
+## Code Style
+- Prefer TypeScript, Node 20, fetch API
+- Never print secrets. Use env vars
+- Replies must be under 2–4 seconds when possible
+- Style: concise functions, JSDoc on exported functions
+
+## Project Structure
+- Keep a tidy structure so Cursor can "see" everything
+- Pin files like `figma-webhook.ts`, `figma.ts`, and `openai.ts` so they're always in context
+- When asking for changes, say *where* (e.g., "In `figma-webhook.ts`, add HMAC verification")
+
+## Working with Cursor
+- Use **CMD+K** to ask Cursor to *modify the open file*
+- Pin files (click the pin icon) like `figma-webhook.ts`, `figma.ts`, and `openai.ts`
+- Keep a `TODO.md` so Cursor can track your plan
+
+## Environment Variables
+- All secrets should be in environment variables
+- Reference them as `process.env.VARIABLE_NAME`
+- Never hardcode API keys or secrets
+
+## Error Handling
+- Always wrap API calls in try-catch
+- Log errors with context
+- Return appropriate HTTP status codes
+- Graceful degradation when services are unavailable
