@@ -38,7 +38,7 @@ export async function critiqueWithVision(opts: { ask: string; imageUrl?: string 
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
-  const data = await res.json();
+  const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
   const text = data.choices?.[0]?.message?.content?.trim();
   return text || 'No response.';
 }
