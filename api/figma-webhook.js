@@ -193,6 +193,21 @@ async function replyToComment(fileKey, commentId, message) {
   return result;
 }
 
+// Helper function to log activity to monitoring system
+async function logActivity(activityData) {
+  try {
+    await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/activity`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(activityData)
+    });
+  } catch (error) {
+    console.error('Activity log error:', error.message);
+  }
+}
+
 // Helper function to log to Supabase (async, don't wait)
 async function logToSupabase(eventData) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -258,6 +273,17 @@ export default async function handler(req, res) {
 
     console.log('Processing @buddy comment:', message);
 
+    // Log activity start
+    await logActivity({
+      user: comment.user?.name || 'Unknown',
+      message: message,
+      file_key: file_key,
+      comment_id: comment.id,
+      status: 'processing',
+      stage: 'webhook_received',
+      timestamp: new Date().toISOString()
+    });
+
     // Extract the ask after @buddy
     const ask = message.replace(/.*@buddy\s*/i, '').trim() || 'General critique this frame';
     
@@ -322,8 +348,36 @@ export default async function handler(req, res) {
     try {
       await replyToComment(file_key, comment.id, critique);
       console.log('✅ Replied to Figma comment successfully in', totalLatency, 'ms');
+      
+      // Log successful activity
+      await logActivity({
+        user: comment.user?.name || 'Unknown',
+        message: message,
+        file_key: file_key,
+        comment_id: comment.id,
+        status: 'success',
+        stage: 'figma_reply_sent',
+        latency: totalLatency,
+        critique: critique.substring(0, 100) + '...',
+        timestamp: new Date().toISOString()
+      });
+      
     } catch (err) {
       console.error('Failed to reply to Figma comment:', err);
+      
+      // Log failed activity
+      await logActivity({
+        user: comment.user?.name || 'Unknown',
+        message: message,
+        file_key: file_key,
+        comment_id: comment.id,
+        status: 'failed',
+        stage: 'figma_reply_failed',
+        error: err.message,
+        latency: totalLatency,
+        timestamp: new Date().toISOString()
+      });
+      
       return res.status(500).json({ 
         ok: false, 
         error: 'Failed to reply to Figma comment: ' + err.message 
