@@ -272,8 +272,10 @@ export default async function handler(req, res) {
     }
 
     const { file_key, comment } = data;
+    // Handle both array and object formats for comment data
+    const commentData = Array.isArray(comment) ? comment[0] : comment;
     // Handle both 'message' and 'text' fields for different webhook formats
-    const message = comment.message || comment.text || '';
+    const message = commentData?.message || commentData?.text || '';
 
     // Check for @buddy mention
     if (!/@buddy\b/i.test(message)) {
@@ -285,10 +287,10 @@ export default async function handler(req, res) {
 
     // Log activity start
     await logActivity({
-      user: comment.triggered_by?.handle || comment.user?.name || 'Unknown',
+      user: data.triggered_by?.handle || commentData?.triggered_by?.handle || commentData?.user?.name || 'Unknown',
       message: message,
       file_key: file_key,
-      comment_id: comment.comment_id || comment.id,
+      comment_id: data.comment_id || commentData?.comment_id || commentData?.id,
       status: 'processing',
       stage: 'webhook_received',
       timestamp: new Date().toISOString()
@@ -303,9 +305,9 @@ export default async function handler(req, res) {
     let imageSource = 'none';
 
     // First, check if there's an image attachment in the comment
-    if (comment.attachments && comment.attachments.length > 0) {
+    if (commentData?.attachments && commentData.attachments.length > 0) {
       // Get the first image attachment
-      const imageAttachment = comment.attachments.find(att => 
+      const imageAttachment = commentData.attachments.find(att => 
         att.type === 'image' || att.mime_type?.startsWith('image/')
       );
       
@@ -355,14 +357,14 @@ export default async function handler(req, res) {
     const totalLatency = Date.now() - startTime;
 
     // Reply to the comment in Figma (this should create a reply, not a new comment)
-    const commentId = comment.comment_id || comment.id;
+    const commentId = data.comment_id || commentData?.comment_id || commentData?.id;
     try {
       await replyToComment(file_key, commentId, critique);
       console.log('✅ Replied to Figma comment successfully in', totalLatency, 'ms');
       
       // Log successful activity
       await logActivity({
-        user: comment.triggered_by?.handle || comment.user?.name || 'Unknown',
+        user: data.triggered_by?.handle || commentData?.triggered_by?.handle || commentData?.user?.name || 'Unknown',
         message: message,
         file_key: file_key,
         comment_id: commentId,
@@ -378,7 +380,7 @@ export default async function handler(req, res) {
       
       // Log failed activity
       await logActivity({
-        user: comment.triggered_by?.handle || comment.user?.name || 'Unknown',
+        user: data.triggered_by?.handle || commentData?.triggered_by?.handle || commentData?.user?.name || 'Unknown',
         message: message,
         file_key: file_key,
         comment_id: commentId,
@@ -398,7 +400,7 @@ export default async function handler(req, res) {
     // Log to Supabase (async, don't wait)
     logToSupabase({
       file_key: file_key,
-      comment_id: comment.id,
+      comment_id: commentId,
       node_id: imageSource === 'figma-export' ? extractNodeIdFromMessage(message) : null,
       scope: ask.startsWith('/') ? ask.split(' ')[0] : 'full',
       image_included: imageIncluded,
