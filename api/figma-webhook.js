@@ -196,13 +196,22 @@ async function replyToComment(fileKey, commentId, message) {
 // Helper function to log activity to monitoring system
 async function logActivity(activityData) {
   try {
-    await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/activity`, {
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://buddy-lac-five.vercel.app';
+    console.log('Logging activity:', activityData);
+    
+    const response = await fetch(`${baseUrl}/api/activity`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(activityData)
     });
+    
+    if (!response.ok) {
+      console.error('Activity log failed:', response.status, await response.text());
+    } else {
+      console.log('Activity logged successfully');
+    }
   } catch (error) {
     console.error('Activity log error:', error.message);
   }
