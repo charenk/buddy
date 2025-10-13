@@ -80,6 +80,8 @@ Structure with short headers and bullets. No fluff. Offer alternatives tied to t
 
 // Helper function to reply to Figma comment
 async function replyToComment(fileKey, commentId, message) {
+  console.log('Attempting to reply to Figma comment:', { fileKey, commentId, message: message.substring(0, 100) + '...' });
+  
   const response = await fetch(`https://api.figma.com/v1/files/${fileKey}/comments`, {
     method: 'POST',
     headers: {
@@ -87,12 +89,22 @@ async function replyToComment(fileKey, commentId, message) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
+      comment_id: commentId,
       message: message
     })
   });
 
-  if (!response.ok) throw new Error(`Reply failed: ${response.status}`);
-  return response.json();
+  console.log('Figma API response status:', response.status);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Figma API error:', errorText);
+    throw new Error(`Reply failed: ${response.status} - ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log('Figma API reply successful:', result);
+  return result;
 }
 
 // Helper function to log to Supabase
