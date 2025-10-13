@@ -34,25 +34,99 @@ function extractNodeIdFromMessage(message) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-// Helper function to get AI critique (with optional visual analysis)
+// Helper function to parse user preferences from ask
+function parseUserPreferences(ask) {
+  const preferences = {
+    domain: 'general',
+    focus: 'usability',
+    tone: 'concise',
+    length: 'standard',
+    expertise: 'product-design'
+  };
+
+  // Domain expertise
+  if (/mobile|ios|android/i.test(ask)) preferences.domain = 'mobile';
+  if (/web|desktop|browser/i.test(ask)) preferences.domain = 'web';
+  if (/enterprise|b2b|saas/i.test(ask)) preferences.domain = 'enterprise';
+  if (/ecommerce|shop|commerce/i.test(ask)) preferences.domain = 'ecommerce';
+  if (/fintech|banking|finance/i.test(ask)) preferences.domain = 'fintech';
+
+  // Focus areas
+  if (/accessibility|a11y|wcag/i.test(ask)) preferences.focus = 'accessibility';
+  if (/visual|ui|design|aesthetic/i.test(ask)) preferences.focus = 'visual-design';
+  if (/ux|usability|user-experience/i.test(ask)) preferences.focus = 'usability';
+  if (/performance|speed|optimization/i.test(ask)) preferences.focus = 'performance';
+  if (/conversion|business|metrics/i.test(ask)) preferences.focus = 'business';
+
+  // Tone
+  if (/brief|quick|short/i.test(ask)) preferences.tone = 'brief';
+  if (/detailed|comprehensive|thorough/i.test(ask)) preferences.tone = 'detailed';
+  if (/technical|dev|developer/i.test(ask)) preferences.tone = 'technical';
+
+  // Length
+  if (/brief|quick|short/i.test(ask)) preferences.length = 'brief';
+  if (/comprehensive|detailed|thorough/i.test(ask)) preferences.length = 'comprehensive';
+
+  return preferences;
+}
+
+// Helper function to build system prompt based on preferences
+function buildSystemPrompt(preferences) {
+  const { domain, focus, tone, length, expertise } = preferences;
+
+  const domainExpertise = {
+    'mobile': 'mobile app design with iOS/Android best practices',
+    'web': 'web application design with responsive principles',
+    'enterprise': 'enterprise software with complex workflows',
+    'ecommerce': 'e-commerce platforms and conversion optimization',
+    'fintech': 'financial applications with security and compliance',
+    'general': 'general product design principles'
+  };
+
+  const focusAreas = {
+    'accessibility': 'accessibility compliance (WCAG 2.1 AA), screen readers, keyboard navigation, color contrast',
+    'visual-design': 'visual hierarchy, typography, color theory, spacing, branding consistency',
+    'usability': 'user experience, task completion, cognitive load, information architecture',
+    'performance': 'loading times, rendering performance, user perception of speed',
+    'business': 'conversion rates, user engagement, business metrics, ROI',
+    'general': 'overall design quality and user experience'
+  };
+
+  const toneInstructions = {
+    'brief': 'Keep responses under 200 words. Use bullet points. Be direct.',
+    'concise': 'Keep responses under 400 words. Use clear headers and bullets.',
+    'detailed': 'Provide comprehensive analysis up to 800 words with examples.',
+    'technical': 'Use technical terminology. Include implementation details.'
+  };
+
+  const lengthInstructions = {
+    'brief': 'Focus on top 3 issues only. Skip edge cases.',
+    'standard': 'Cover main issues and 2-3 alternatives.',
+    'comprehensive': 'Cover all aspects: risks, edge cases, alternatives, metrics.'
+  };
+
+  return `You are "Buddy," a ${domainExpertise[domain]} expert specializing in ${focusAreas[focus]}.
+
+${toneInstructions[tone]}
+
+${lengthInstructions[length]}
+
+Always be specific and actionable. ${tone === 'technical' ? 'Include technical implementation details.' : 'Avoid jargon, be clear and practical.'}`;
+}
+
+// Helper function to get AI critique (with customizable preferences)
 async function getAICritique(ask, imageUrl = null) {
-  const systemPrompt = `You are "Buddy," a staff/principal product designer with systems thinking.
-Be direct, specific, and practical. Always:
-1) Call out usability risks,
-2) Edge cases and failure states,
-3) Accessibility (contrast, focus, keyboard, SR),
-4) Responsive behavior,
-5) IA clarity,
-6) Interaction flows (loading/empty/error/success),
-7) Metrics to validate.
-Structure with short headers and bullets. No fluff. Offer alternatives tied to the problem.`;
+  const preferences = parseUserPreferences(ask);
+  const systemPrompt = buildSystemPrompt(preferences);
+
+  console.log('AI Preferences:', preferences);
 
   const messages = [
     { role: 'system', content: systemPrompt },
     {
       role: 'user',
       content: [
-        { type: 'text', text: `Ask: ${ask}\nDeliver a compact critique with: What works, Top risks, Edge cases, Accessibility, Responsive, Alternatives, Next moves, Metrics.` }
+        { type: 'text', text: `Analyze this design: ${ask}` }
       ]
     }
   ];
@@ -61,6 +135,10 @@ Structure with short headers and bullets. No fluff. Offer alternatives tied to t
   if (imageUrl) {
     messages[1].content.push({ type: 'image_url', image_url: imageUrl });
   }
+
+  // Adjust token limit based on preferences
+  const maxTokens = preferences.length === 'brief' ? 500 : 
+                   preferences.length === 'comprehensive' ? 2000 : 1000;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -71,7 +149,7 @@ Structure with short headers and bullets. No fluff. Offer alternatives tied to t
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       messages: messages,
-      max_tokens: imageUrl ? 1500 : 1000, // More tokens for visual analysis
+      max_tokens: maxTokens,
       temperature: 0.7
     })
   });
