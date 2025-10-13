@@ -16,8 +16,26 @@ function verifySignature(body, signature) {
   return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(clean));
 }
 
-// Helper function to get AI critique (text-only for speed)
-async function getAICritique(ask) {
+// Helper function to export Figma node as PNG (for visual analysis)
+async function exportNodePng(fileKey, nodeId) {
+  const url = `https://api.figma.com/v1/images/${fileKey}?ids=${encodeURIComponent(nodeId)}&format=png&scale=2`;
+  const response = await fetch(url, {
+    headers: { 'X-Figma-Token': FIGMA_PAT }
+  });
+  
+  if (!response.ok) throw new Error(`Figma export failed: ${response.status}`);
+  const data = await response.json();
+  return data.images?.[nodeId];
+}
+
+// Helper function to extract node ID from message
+function extractNodeIdFromMessage(message) {
+  const match = message.match(/node-id=([^\s&]+)/i);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+// Helper function to get AI critique (with optional visual analysis)
+async function getAICritique(ask, imageUrl = null) {
   const systemPrompt = `You are "Buddy," a staff/principal product designer with systems thinking.
 Be direct, specific, and practical. Always:
 1) Call out usability risks,
@@ -29,6 +47,21 @@ Be direct, specific, and practical. Always:
 7) Metrics to validate.
 Structure with short headers and bullets. No fluff. Offer alternatives tied to the problem.`;
 
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: `Ask: ${ask}\nDeliver a compact critique with: What works, Top risks, Edge cases, Accessibility, Responsive, Alternatives, Next moves, Metrics.` }
+      ]
+    }
+  ];
+
+  // Add image if provided
+  if (imageUrl) {
+    messages[1].content.push({ type: 'image_url', image_url: imageUrl });
+  }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -37,14 +70,8 @@ Structure with short headers and bullets. No fluff. Offer alternatives tied to t
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: `Ask: ${ask}\nDeliver a compact critique with: What works, Top risks, Edge cases, Accessibility, Responsive, Alternatives, Next moves, Metrics.`
-        }
-      ],
-      max_tokens: 1000, // Limit response length for speed
+      messages: messages,
+      max_tokens: imageUrl ? 1500 : 1000, // More tokens for visual analysis
       temperature: 0.7
     })
   });
@@ -151,16 +178,39 @@ export default async function handler(req, res) {
 
     // Extract the ask after @buddy
     const ask = message.replace(/.*@buddy\s*/i, '').trim() || 'General critique this frame';
+    
+    // Check if user wants visual analysis
+    const wantsVisual = /visual|image|see|look/i.test(ask);
+    
+    // Try to get node ID for visual analysis
+    let nodeId = null;
+    let imageUrl = null;
+    let imageIncluded = false;
+    
+    if (wantsVisual) {
+      nodeId = extractNodeIdFromMessage(message);
+      if (nodeId) {
+        try {
+          imageUrl = await exportNodePng(file_key, nodeId);
+          imageIncluded = true;
+          console.log('Exported image for visual analysis:', imageUrl);
+        } catch (error) {
+          console.log('Image export failed, continuing with text-only:', error.message);
+        }
+      } else {
+        console.log('No node ID found for visual analysis, using text-only');
+      }
+    }
 
-    // Get AI critique (text-only for speed)
+    // Get AI critique (with or without visual)
     const aiStartTime = Date.now();
     let critique = '';
     let success = true;
     let error = null;
 
     try {
-      critique = await getAICritique(ask);
-      console.log('AI critique generated in', Date.now() - aiStartTime, 'ms');
+      critique = await getAICritique(ask, imageUrl);
+      console.log('AI critique generated in', Date.now() - aiStartTime, 'ms', imageIncluded ? '(with visual)' : '(text-only)');
     } catch (err) {
       success = false;
       error = err.message;
@@ -186,9 +236,9 @@ export default async function handler(req, res) {
     logToSupabase({
       file_key: file_key,
       comment_id: comment.id,
-      node_id: null, // No image processing for speed
+      node_id: nodeId,
       scope: ask.startsWith('/') ? ask.split(' ')[0] : 'full',
-      image_included: false, // Disabled for speed
+      image_included: imageIncluded,
       model: 'gpt-4o-mini',
       latency_ms: totalLatency,
       ok: success,
