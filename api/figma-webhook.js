@@ -1,4 +1,4 @@
-// Full Figma AI Buddy webhook implementation
+// Optimized Figma AI Buddy webhook - Fast responses with proper replies
 const crypto = require('crypto');
 
 // Environment variables
@@ -16,26 +16,8 @@ function verifySignature(body, signature) {
   return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(clean));
 }
 
-// Helper function to extract node ID from message
-function extractNodeIdFromMessage(message) {
-  const match = message.match(/node-id=([^\s&]+)/i);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-// Helper function to export Figma node as PNG
-async function exportNodePng(fileKey, nodeId) {
-  const url = `https://api.figma.com/v1/images/${fileKey}?ids=${encodeURIComponent(nodeId)}&format=png&scale=2`;
-  const response = await fetch(url, {
-    headers: { 'X-Figma-Token': FIGMA_PAT }
-  });
-  
-  if (!response.ok) throw new Error(`Figma export failed: ${response.status}`);
-  const data = await response.json();
-  return data.images?.[nodeId];
-}
-
-// Helper function to get AI critique
-async function getAICritique(ask, imageUrl) {
+// Helper function to get AI critique (text-only for speed)
+async function getAICritique(ask) {
   const systemPrompt = `You are "Buddy," a staff/principal product designer with systems thinking.
 Be direct, specific, and practical. Always:
 1) Call out usability risks,
@@ -47,20 +29,6 @@ Be direct, specific, and practical. Always:
 7) Metrics to validate.
 Structure with short headers and bullets. No fluff. Offer alternatives tied to the problem.`;
 
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    {
-      role: 'user',
-      content: [
-        { type: 'text', text: `Ask: ${ask}\nDeliver a compact critique with: What works, Top risks, Edge cases, Accessibility, Responsive, Alternatives, Next moves, Metrics.` }
-      ]
-    }
-  ];
-
-  if (imageUrl) {
-    messages[1].content.push({ type: 'image_url', image_url: imageUrl });
-  }
-
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -69,7 +37,15 @@ Structure with short headers and bullets. No fluff. Offer alternatives tied to t
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
-      messages: messages
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: `Ask: ${ask}\nDeliver a compact critique with: What works, Top risks, Edge cases, Accessibility, Responsive, Alternatives, Next moves, Metrics.`
+        }
+      ],
+      max_tokens: 1000, // Limit response length for speed
+      temperature: 0.7
     })
   });
 
@@ -78,10 +54,11 @@ Structure with short headers and bullets. No fluff. Offer alternatives tied to t
   return data.choices?.[0]?.message?.content?.trim() || 'No response.';
 }
 
-// Helper function to reply to Figma comment
+// Helper function to reply to Figma comment (creates a proper reply)
 async function replyToComment(fileKey, commentId, message) {
-  console.log('Attempting to reply to Figma comment:', { fileKey, commentId, message: message.substring(0, 100) + '...' });
+  console.log('Replying to Figma comment:', { fileKey, commentId, messageLength: message.length });
   
+  // Use the correct Figma API endpoint for creating replies
   const response = await fetch(`https://api.figma.com/v1/files/${fileKey}/comments`, {
     method: 'POST',
     headers: {
@@ -107,15 +84,14 @@ async function replyToComment(fileKey, commentId, message) {
   return result;
 }
 
-// Helper function to log to Supabase
+// Helper function to log to Supabase (async, don't wait)
 async function logToSupabase(eventData) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.log('Supabase not configured, skipping log');
     return;
   }
 
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/events`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/events`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
@@ -124,16 +100,14 @@ async function logToSupabase(eventData) {
       },
       body: JSON.stringify(eventData)
     });
-
-    if (!response.ok) {
-      console.error('Supabase log failed:', response.status);
-    }
   } catch (error) {
     console.error('Supabase log error:', error.message);
   }
 }
 
 export default async function handler(req, res) {
+  const startTime = Date.now();
+  
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -178,28 +152,15 @@ export default async function handler(req, res) {
     // Extract the ask after @buddy
     const ask = message.replace(/.*@buddy\s*/i, '').trim() || 'General critique this frame';
 
-    // Try to get node ID and export image
-    let nodeId = extractNodeIdFromMessage(message);
-    let imageUrl = null;
-
-    if (nodeId) {
-      try {
-        imageUrl = await exportNodePng(file_key, nodeId);
-        console.log('Exported image:', imageUrl);
-      } catch (error) {
-        console.log('Image export failed:', error.message);
-      }
-    }
-
-    // Get AI critique
-    const startTime = Date.now();
+    // Get AI critique (text-only for speed)
+    const aiStartTime = Date.now();
     let critique = '';
     let success = true;
     let error = null;
 
     try {
-      critique = await getAICritique(ask, imageUrl);
-      console.log('AI critique generated:', critique.substring(0, 100) + '...');
+      critique = await getAICritique(ask);
+      console.log('AI critique generated in', Date.now() - aiStartTime, 'ms');
     } catch (err) {
       success = false;
       error = err.message;
@@ -207,25 +168,12 @@ export default async function handler(req, res) {
       console.error('AI critique failed:', err);
     }
 
-    const latency = Date.now() - startTime;
+    const totalLatency = Date.now() - startTime;
 
-    // Log to Supabase
-    await logToSupabase({
-      file_key: file_key,
-      comment_id: comment.id,
-      node_id: nodeId,
-      scope: ask.startsWith('/') ? ask.split(' ')[0] : 'full',
-      image_included: Boolean(imageUrl),
-      model: 'gpt-4o-mini',
-      latency_ms: latency,
-      ok: success,
-      error: error
-    });
-
-    // Reply to the comment in Figma
+    // Reply to the comment in Figma (this should create a reply, not a new comment)
     try {
       await replyToComment(file_key, comment.id, critique);
-      console.log('Replied to Figma comment successfully');
+      console.log('✅ Replied to Figma comment successfully in', totalLatency, 'ms');
     } catch (err) {
       console.error('Failed to reply to Figma comment:', err);
       return res.status(500).json({ 
@@ -234,17 +182,32 @@ export default async function handler(req, res) {
       });
     }
 
+    // Log to Supabase (async, don't wait)
+    logToSupabase({
+      file_key: file_key,
+      comment_id: comment.id,
+      node_id: null, // No image processing for speed
+      scope: ask.startsWith('/') ? ask.split(' ')[0] : 'full',
+      image_included: false, // Disabled for speed
+      model: 'gpt-4o-mini',
+      latency_ms: totalLatency,
+      ok: success,
+      error: error
+    });
+
     return res.status(200).json({ 
       ok: true, 
       message: 'Processed @buddy comment successfully',
-      critique: critique.substring(0, 100) + '...'
+      critique: critique.substring(0, 100) + '...',
+      latency_ms: totalLatency
     });
 
   } catch (error) {
     console.error('Webhook error:', error);
     return res.status(500).json({ 
       ok: false, 
-      error: error.message 
+      error: error.message,
+      latency_ms: Date.now() - startTime
     });
   }
 }
