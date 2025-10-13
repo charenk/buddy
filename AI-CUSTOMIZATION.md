@@ -102,12 +102,30 @@ defaults: {
 
 ## 🎨 Visual Analysis
 
-Add `visual`, `image`, `see`, or `look` to enable visual analysis:
+### **Method 1: Image Attachments (Recommended)**
+1. **Paste a screenshot** directly into your Figma comment
+2. **Add your question** with `@buddy`
+3. **AI automatically analyzes** the attached image
+
+```
+[Paste screenshot] @buddy analyze this mobile design
+[Paste screenshot] @buddy accessibility review
+[Paste screenshot] @buddy visual design feedback
+```
+
+### **Method 2: Figma Node Export**
+Add `visual`, `image`, `see`, or `look` to enable Figma node analysis:
 ```
 @buddy visual mobile design review
 @buddy look at this UI and suggest improvements
 @buddy image analysis for accessibility
 ```
+
+### **Image Analysis Features:**
+- ✅ **Automatic detection** - AI detects attached images
+- ✅ **Higher quality** - Direct image analysis vs. Figma export
+- ✅ **Faster processing** - No need to export from Figma
+- ✅ **Any image type** - Screenshots, mockups, wireframes
 
 ## 💡 Pro Tips
 
