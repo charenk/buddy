@@ -272,7 +272,8 @@ export default async function handler(req, res) {
     }
 
     const { file_key, comment } = data;
-    const message = comment.message || '';
+    // Handle both 'message' and 'text' fields for different webhook formats
+    const message = comment.message || comment.text || '';
 
     // Check for @buddy mention
     if (!/@buddy\b/i.test(message)) {
@@ -284,10 +285,10 @@ export default async function handler(req, res) {
 
     // Log activity start
     await logActivity({
-      user: comment.user?.name || 'Unknown',
+      user: comment.triggered_by?.handle || comment.user?.name || 'Unknown',
       message: message,
       file_key: file_key,
-      comment_id: comment.id,
+      comment_id: comment.comment_id || comment.id,
       status: 'processing',
       stage: 'webhook_received',
       timestamp: new Date().toISOString()
@@ -354,16 +355,17 @@ export default async function handler(req, res) {
     const totalLatency = Date.now() - startTime;
 
     // Reply to the comment in Figma (this should create a reply, not a new comment)
+    const commentId = comment.comment_id || comment.id;
     try {
-      await replyToComment(file_key, comment.id, critique);
+      await replyToComment(file_key, commentId, critique);
       console.log('✅ Replied to Figma comment successfully in', totalLatency, 'ms');
       
       // Log successful activity
       await logActivity({
-        user: comment.user?.name || 'Unknown',
+        user: comment.triggered_by?.handle || comment.user?.name || 'Unknown',
         message: message,
         file_key: file_key,
-        comment_id: comment.id,
+        comment_id: commentId,
         status: 'success',
         stage: 'figma_reply_sent',
         latency: totalLatency,
@@ -376,10 +378,10 @@ export default async function handler(req, res) {
       
       // Log failed activity
       await logActivity({
-        user: comment.user?.name || 'Unknown',
+        user: comment.triggered_by?.handle || comment.user?.name || 'Unknown',
         message: message,
         file_key: file_key,
-        comment_id: comment.id,
+        comment_id: commentId,
         status: 'failed',
         stage: 'figma_reply_failed',
         error: err.message,
