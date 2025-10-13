@@ -196,22 +196,24 @@ async function replyToComment(fileKey, commentId, message) {
 // Helper function to log activity to monitoring system
 async function logActivity(activityData) {
   try {
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://buddy-lac-five.vercel.app';
-    console.log('Logging activity:', activityData);
+    // Use a simple in-memory store for now to avoid circular calls
+    console.log('Activity logged:', JSON.stringify(activityData, null, 2));
     
-    const response = await fetch(`${baseUrl}/api/activity`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(activityData)
+    // Store in a simple global array (for demo purposes)
+    if (!global.activityLog) {
+      global.activityLog = [];
+    }
+    global.activityLog.push({
+      ...activityData,
+      id: `activity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     });
     
-    if (!response.ok) {
-      console.error('Activity log failed:', response.status, await response.text());
-    } else {
-      console.log('Activity logged successfully');
+    // Keep only last 100 activities
+    if (global.activityLog.length > 100) {
+      global.activityLog.splice(0, global.activityLog.length - 100);
     }
+    
+    console.log('Activity stored successfully');
   } catch (error) {
     console.error('Activity log error:', error.message);
   }
