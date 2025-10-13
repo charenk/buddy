@@ -133,7 +133,11 @@ async function getAICritique(ask, imageUrl = null) {
 
   // Add image if provided
   if (imageUrl) {
-    messages[1].content.push({ type: 'image_url', image_url: imageUrl });
+    messages[1].content.push({ 
+      type: 'image_url', 
+      image_url: { url: imageUrl }
+    });
+    console.log('Added image to AI analysis:', imageUrl.substring(0, 100) + '...');
   }
 
   // Adjust token limit based on preferences
@@ -257,23 +261,39 @@ export default async function handler(req, res) {
     // Extract the ask after @buddy
     const ask = message.replace(/.*@buddy\s*/i, '').trim() || 'General critique this frame';
     
-    // Check if user wants visual analysis
-    const wantsVisual = /visual|image|see|look/i.test(ask);
-    
-    // Try to get node ID for visual analysis
-    let nodeId = null;
+    // Check for image attachments in the comment
     let imageUrl = null;
     let imageIncluded = false;
+    let imageSource = 'none';
+
+    // First, check if there's an image attachment in the comment
+    if (comment.attachments && comment.attachments.length > 0) {
+      // Get the first image attachment
+      const imageAttachment = comment.attachments.find(att => 
+        att.type === 'image' || att.mime_type?.startsWith('image/')
+      );
+      
+      if (imageAttachment) {
+        imageUrl = imageAttachment.url;
+        imageIncluded = true;
+        imageSource = 'attachment';
+        console.log('Found image attachment:', imageUrl);
+      }
+    }
+
+    // If no attachment, check if user wants visual analysis from Figma node
+    const wantsVisual = /visual|image|see|look/i.test(ask);
     
-    if (wantsVisual) {
-      nodeId = extractNodeIdFromMessage(message);
+    if (!imageIncluded && wantsVisual) {
+      const nodeId = extractNodeIdFromMessage(message);
       if (nodeId) {
         try {
           imageUrl = await exportNodePng(file_key, nodeId);
           imageIncluded = true;
-          console.log('Exported image for visual analysis:', imageUrl);
+          imageSource = 'figma-export';
+          console.log('Exported Figma node for visual analysis:', imageUrl);
         } catch (error) {
-          console.log('Image export failed, continuing with text-only:', error.message);
+          console.log('Figma export failed, continuing with text-only:', error.message);
         }
       } else {
         console.log('No node ID found for visual analysis, using text-only');
@@ -314,9 +334,10 @@ export default async function handler(req, res) {
     logToSupabase({
       file_key: file_key,
       comment_id: comment.id,
-      node_id: nodeId,
+      node_id: imageSource === 'figma-export' ? extractNodeIdFromMessage(message) : null,
       scope: ask.startsWith('/') ? ask.split(' ')[0] : 'full',
       image_included: imageIncluded,
+      image_source: imageSource,
       model: 'gpt-4o-mini',
       latency_ms: totalLatency,
       ok: success,
