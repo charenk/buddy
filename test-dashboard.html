@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figma AI Buddy - Test Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-bottom: 20px; }
+        .status { background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .error { background: #ffe8e8; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px 5px;
+        }
+        .button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Figma AI Buddy - Test Dashboard</h1>
+        
+        <div class="status">
+            <h3>✅ System Status: WORKING</h3>
+            <p>The dashboard is live and functional. If you're seeing 404 errors, you might be using the wrong URL.</p>
+        </div>
+
+        <h3>🔗 Correct URLs:</h3>
+        <ul>
+            <li><strong>Main Dashboard:</strong> <a href="https://buddy-lac-five.vercel.app/dashboard.html" target="_blank">https://buddy-lac-five.vercel.app/dashboard.html</a></li>
+            <li><strong>Test Page:</strong> <a href="https://buddy-lac-five.vercel.app/test-dashboard.html" target="_blank">https://buddy-lac-five.vercel.app/test-dashboard.html</a></li>
+        </ul>
+
+        <h3>❌ Wrong URLs (will give 404):</h3>
+        <ul>
+            <li><s>https://buddy-lac-five.vercel.app/signup.html</s> (doesn't exist)</li>
+            <li><s>https://buddy-lac-five.vercel.app/</s> (redirects to 404)</li>
+        </ul>
+
+        <h3>🚀 Quick Actions:</h3>
+        <a href="https://buddy-lac-five.vercel.app/dashboard.html" class="button" target="_blank">Open Main Dashboard</a>
+        <a href="https://www.figma.com/developers" class="button" target="_blank">Figma Developer Portal</a>
+
+        <h3>📋 Next Steps:</h3>
+        <ol>
+            <li>Click "Open Main Dashboard" above</li>
+            <li>Add your OpenAI API key</li>
+            <li>Set up Figma webhook</li>
+            <li>Test @buddy in Figma files</li>
+        </ol>
+    </div>
+</body>
+</html>
