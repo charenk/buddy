@@ -1,0 +1,20 @@
+{
+  "name": "Figma AI Buddy",
+  "id": "figma-ai-buddy",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "editorType": [
+    "figma"
+  ],
+  "networkAccess": {
+    "allowedDomains": [
+      "https://buddy-lac-five.vercel.app"
+    ]
+  },
+  "permissions": [
+    "currentuser"
+  ]
+}
