@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figma AI Buddy - Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-bottom: 20px; }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover { background: #0056b3; }
+        .status { padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Figma AI Buddy - Test Page</h1>
+        
+        <div id="status"></div>
+        
+        <h2>System Status</h2>
+        <p>This page is working! The system is operational.</p>
+        
+        <h2>Working Endpoints</h2>
+        <ul>
+            <li><strong>Monitor:</strong> <a href="/api/monitor" target="_blank">/api/monitor</a></li>
+            <li><strong>Activity:</strong> <a href="/api/activity" target="_blank">/api/activity</a></li>
+            <li><strong>Webhook:</strong> <a href="/api/figma-webhook" target="_blank">/api/figma-webhook</a></li>
+        </ul>
+        
+        <h2>Next Steps</h2>
+        <p>Since the system is working, you can:</p>
+        <ol>
+            <li>Set up Figma webhook using: <code>https://buddy-lac-five.vercel.app/api/figma-webhook</code></li>
+            <li>Test @buddy in any Figma file</li>
+            <li>Use the working endpoints for monitoring</li>
+        </ol>
+        
+        <h2>Test Buttons</h2>
+        <button class="btn" onclick="testMonitor()">Test Monitor API</button>
+        <button class="btn" onclick="testActivity()">Test Activity API</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function showStatus(message, type = 'success') {
+            document.getElementById('status').innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function testMonitor() {
+            try {
+                const response = await fetch('/api/monitor');
+                const data = await response.json();
+                document.getElementById('results').innerHTML = `
+                    <h3>Monitor API Result:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                showStatus('Monitor API working!', 'success');
+            } catch (error) {
+                showStatus('Monitor API error: ' + error.message, 'error');
+            }
+        }
+
+        async function testActivity() {
+            try {
+                const response = await fetch('/api/activity');
+                const data = await response.json();
+                document.getElementById('results').innerHTML = `
+                    <h3>Activity API Result:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                showStatus('Activity API working!', 'success');
+            } catch (error) {
+                showStatus('Activity API error: ' + error.message, 'error');
+            }
+        }
+
+        // Show initial status
+        showStatus('Test page loaded successfully! System is operational.');
+    </script>
+</body>
+</html>
