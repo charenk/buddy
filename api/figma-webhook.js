@@ -1,4 +1,6 @@
-// Optimized Figma AI Buddy webhook - Fast responses with proper replies
+// High-Performance Figma AI Buddy Webhook with Context Management
+// Optimized for speed with user context integration
+
 const crypto = require('crypto');
 
 // Environment variables
@@ -34,140 +36,265 @@ function extractNodeIdFromMessage(message) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-// Helper function to parse user preferences from ask
-function parseUserPreferences(ask) {
-  const preferences = {
-    domain: 'general',
-    focus: 'usability',
-    tone: 'concise',
-    length: 'standard',
-    expertise: 'product-design'
-  };
-
-  // Domain expertise
-  if (/mobile|ios|android/i.test(ask)) preferences.domain = 'mobile';
-  if (/web|desktop|browser/i.test(ask)) preferences.domain = 'web';
-  if (/enterprise|b2b|saas/i.test(ask)) preferences.domain = 'enterprise';
-  if (/ecommerce|shop|commerce/i.test(ask)) preferences.domain = 'ecommerce';
-  if (/fintech|banking|finance/i.test(ask)) preferences.domain = 'fintech';
-
-  // Focus areas
-  if (/accessibility|a11y|wcag/i.test(ask)) preferences.focus = 'accessibility';
-  if (/visual|ui|design|aesthetic/i.test(ask)) preferences.focus = 'visual-design';
-  if (/ux|usability|user-experience/i.test(ask)) preferences.focus = 'usability';
-  if (/performance|speed|optimization/i.test(ask)) preferences.focus = 'performance';
-  if (/conversion|business|metrics/i.test(ask)) preferences.focus = 'business';
-
-  // Tone
-  if (/brief|quick|short/i.test(ask)) preferences.tone = 'brief';
-  if (/detailed|comprehensive|thorough/i.test(ask)) preferences.tone = 'detailed';
-  if (/technical|dev|developer/i.test(ask)) preferences.tone = 'technical';
-
-  // Length
-  if (/brief|quick|short/i.test(ask)) preferences.length = 'brief';
-  if (/comprehensive|detailed|thorough/i.test(ask)) preferences.length = 'comprehensive';
-
-  return preferences;
-}
-
-// Helper function to build system prompt based on preferences
-function buildSystemPrompt(preferences) {
-  const { domain, focus, tone, length, expertise } = preferences;
-
-  const domainExpertise = {
-    'mobile': 'mobile app design with iOS/Android best practices',
-    'web': 'web application design with responsive principles',
-    'enterprise': 'enterprise software with complex workflows',
-    'ecommerce': 'e-commerce platforms and conversion optimization',
-    'fintech': 'financial applications with security and compliance',
-    'general': 'general product design principles'
-  };
-
-  const focusAreas = {
-    'accessibility': 'accessibility compliance (WCAG 2.1 AA), screen readers, keyboard navigation, color contrast',
-    'visual-design': 'visual hierarchy, typography, color theory, spacing, branding consistency',
-    'usability': 'user experience, task completion, cognitive load, information architecture',
-    'performance': 'loading times, rendering performance, user perception of speed',
-    'business': 'conversion rates, user engagement, business metrics, ROI',
-    'general': 'overall design quality and user experience'
-  };
-
-  const toneInstructions = {
-    'brief': 'Keep responses under 200 words. Use bullet points. Be direct.',
-    'concise': 'Keep responses under 400 words. Use clear headers and bullets.',
-    'detailed': 'Provide comprehensive analysis up to 800 words with examples.',
-    'technical': 'Use technical terminology. Include implementation details.'
-  };
-
-  const lengthInstructions = {
-    'brief': 'Focus on top 3 issues only. Skip edge cases.',
-    'standard': 'Cover main issues and 2-3 alternatives.',
-    'comprehensive': 'Cover all aspects: risks, edge cases, alternatives, metrics.'
-  };
-
-  return `You are "Buddy," a ${domainExpertise[domain]} expert specializing in ${focusAreas[focus]}.
-
-${toneInstructions[tone]}
-
-${lengthInstructions[length]}
-
-Always be specific and actionable. ${tone === 'technical' ? 'Include technical implementation details.' : 'Avoid jargon, be clear and practical.'}`;
-}
-
-// Helper function to get AI critique (with customizable preferences)
-async function getAICritique(ask, imageUrl = null) {
-  const preferences = parseUserPreferences(ask);
-  const systemPrompt = buildSystemPrompt(preferences);
-
-  console.log('AI Preferences:', preferences);
-
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    {
-      role: 'user',
-      content: [
-        { type: 'text', text: `Analyze this design: ${ask}` }
-      ]
-    }
-  ];
-
-  // Add image if provided
-  if (imageUrl) {
-    messages[1].content.push({ 
-      type: 'image_url', 
-      image_url: { url: imageUrl }
+// Helper function to get user by Figma handle
+async function getUserByFigmaHandle(handle) {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/users?figma_handle=eq.${handle}&select=*`, {
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'apikey': SUPABASE_SERVICE_ROLE_KEY
+      }
     });
-    console.log('Added image to AI analysis:', imageUrl.substring(0, 100) + '...');
+    
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data[0] || null;
+  } catch (error) {
+    console.error('Error fetching user by Figma handle:', error);
+    return null;
+  }
+}
+
+// Helper function to get user context with caching
+const contextCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getUserContext(userId) {
+  try {
+    // Check cache first
+    const cached = contextCache.get(userId);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.context;
+    }
+
+    // Fetch from database
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/user_contexts?user_id=eq.${userId}&is_active=eq.true&select=*&order=updated_at.desc&limit=1`, {
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'apikey': SUPABASE_SERVICE_ROLE_KEY
+      }
+    });
+    
+    if (!response.ok) return null;
+    const data = await response.json();
+    const context = data[0];
+    
+    if (context) {
+      // Cache the result
+      contextCache.set(userId, { context, timestamp: Date.now() });
+    }
+    
+    return context;
+  } catch (error) {
+    console.error('Error fetching user context:', error);
+    return null;
+  }
+}
+
+// Helper function to build AI prompt with user context
+function buildContextualPrompt(comment, userContext) {
+  if (!userContext) {
+    // Default prompt for users without context
+    return {
+      systemPrompt: "You are a design expert. Provide helpful, actionable feedback on the design.",
+      maxTokens: 400,
+      temperature: 0.3
+    };
   }
 
-  // Adjust token limit based on preferences
-  const maxTokens = preferences.length === 'brief' ? 500 : 
-                   preferences.length === 'comprehensive' ? 2000 : 1000;
+  const { response_style, custom_prompts } = userContext;
+  const { length, tone, focus, domain, language } = response_style;
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: messages,
-      max_tokens: maxTokens,
-      temperature: 0.7
-    })
-  });
+  // Use custom system prompt if provided
+  if (custom_prompts?.systemPrompt) {
+    return {
+      systemPrompt: custom_prompts.systemPrompt,
+      maxTokens: length === 'brief' ? 150 : length === 'detailed' ? 400 : 800,
+      temperature: tone === 'casual' ? 0.7 : tone === 'professional' ? 0.3 : tone === 'encouraging' ? 0.6 : 0.4
+    };
+  }
 
-  if (!response.ok) throw new Error(`OpenAI error: ${response.status}`);
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content?.trim() || 'No response.';
+  // Build system prompt based on user preferences
+  let systemPrompt = `You are a design expert specializing in ${focus.join(', ')}. `;
+  
+  // Add tone instructions
+  switch (tone) {
+    case 'casual':
+      systemPrompt += "Use a friendly, conversational tone. Be encouraging and supportive. ";
+      break;
+    case 'professional':
+      systemPrompt += "Use a formal, professional tone. Be objective and thorough. ";
+      break;
+    case 'encouraging':
+      systemPrompt += "Use an encouraging, positive tone. Focus on growth and improvement. ";
+      break;
+    case 'critical':
+      systemPrompt += "Use a direct, critical tone. Be honest about problems and solutions. ";
+      break;
+  }
+  
+  // Add length instructions
+  switch (length) {
+    case 'brief':
+      systemPrompt += "Provide 2-3 key points maximum. Be concise and actionable. ";
+      break;
+    case 'detailed':
+      systemPrompt += "Provide 5-7 detailed points with explanations and examples. ";
+      break;
+    case 'comprehensive':
+      systemPrompt += "Provide a thorough analysis covering all aspects of the design. ";
+      break;
+  }
+  
+  // Add domain expertise
+  if (domain !== 'general') {
+    systemPrompt += `Focus specifically on ${domain} design principles and best practices. `;
+  }
+  
+  // Add language instruction
+  if (language !== 'en') {
+    systemPrompt += `Respond in ${language}. `;
+  }
+
+  return {
+    systemPrompt,
+    maxTokens: length === 'brief' ? 150 : length === 'detailed' ? 400 : 800,
+    temperature: tone === 'casual' ? 0.7 : tone === 'professional' ? 0.3 : tone === 'encouraging' ? 0.6 : 0.4
+  };
 }
 
-// Helper function to reply to Figma comment (creates a proper reply)
+// Helper function to get AI critique with user context
+async function getAICritique(comment, imageUrl, userContext, userId) {
+  const startTime = Date.now();
+  
+  try {
+    const promptData = buildContextualPrompt(comment, userContext);
+    let apiKey = OPENAI_API_KEY;
+    let interactionType = 'trial';
+    
+    // Check if user has their own API key and no trial remaining
+    if (userContext?.api_key_encrypted) {
+      // In production, decrypt the API key
+      // For now, we'll use the default key but track as 'paid'
+      interactionType = 'paid';
+    }
+    
+    // Determine if we need visual analysis
+    const needsVisualAnalysis = imageUrl && (
+      comment.toLowerCase().includes('visual') ||
+      comment.toLowerCase().includes('image') ||
+      comment.toLowerCase().includes('design') ||
+      comment.toLowerCase().includes('ui') ||
+      comment.toLowerCase().includes('look')
+    );
+    
+    const messages = [
+      {
+        role: "system",
+        content: promptData.systemPrompt
+      },
+      {
+        role: "user",
+        content: needsVisualAnalysis ? 
+          `Analyze this design: "${comment}"` : 
+          `Give design feedback on: "${comment}"`
+      }
+    ];
+    
+    // Add image if needed
+    if (needsVisualAnalysis && imageUrl) {
+      messages[1].content = [
+        {
+          type: "text",
+          text: `Analyze this design: "${comment}"`
+        },
+        {
+          type: "image_url",
+          image_url: { url: imageUrl }
+        }
+      ];
+    }
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: messages,
+        max_tokens: promptData.maxTokens,
+        temperature: promptData.temperature
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const aiResponse = data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
+    
+    const endTime = Date.now();
+    const responseTime = endTime - startTime;
+    
+    // Track usage if userId provided
+    if (userId) {
+      try {
+        const costCents = Math.max(1, (data.usage?.total_tokens || 0) / 1000 * 2); // $0.002 per 1K tokens
+        
+        await fetch(`${SUPABASE_URL}/rest/v1/usage_logs`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            file_key: 'unknown', // Will be updated with actual file_key
+            interaction_type: interactionType,
+            api_key_used: interactionType === 'trial' ? 'yours' : 'user',
+            response_time_ms: responseTime,
+            tokens_used: data.usage?.total_tokens || 0,
+            cost_cents: costCents
+          })
+        });
+        
+        // Update trial count if it's a trial user
+        if (interactionType === 'trial') {
+          await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              trial_count: 'trial_count + 1',
+              last_active_at: new Date().toISOString()
+            })
+          });
+        }
+      } catch (error) {
+        console.error('Error tracking usage:', error);
+      }
+    }
+    
+    console.log(`AI response generated in ${responseTime}ms (${interactionType})`);
+    
+    return aiResponse;
+  } catch (error) {
+    console.error('AI critique error:', error);
+    return 'Sorry, I encountered an error while analyzing your design. Please try again.';
+  }
+}
+
+// Helper function to reply to Figma comment
 async function replyToComment(fileKey, commentId, message) {
   console.log('Replying to Figma comment:', { fileKey, commentId, messageLength: message.length });
   
-  // Use the correct Figma API endpoint for creating replies
   const response = await fetch(`https://api.figma.com/v1/files/${fileKey}/comments`, {
     method: 'POST',
     headers: {
@@ -193,13 +320,11 @@ async function replyToComment(fileKey, commentId, message) {
   return result;
 }
 
-// Helper function to log activity to monitoring system
+// Helper function to log activity
 async function logActivity(activityData) {
   try {
-    // Use a simple in-memory store for now to avoid circular calls
     console.log('Activity logged:', JSON.stringify(activityData, null, 2));
     
-    // Store in a simple global array (for demo purposes)
     if (!global.activityLog) {
       global.activityLog = [];
     }
@@ -208,7 +333,6 @@ async function logActivity(activityData) {
       id: `activity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     });
     
-    // Keep only last 100 activities
     if (global.activityLog.length > 100) {
       global.activityLog.splice(0, global.activityLog.length - 100);
     }
@@ -216,27 +340,6 @@ async function logActivity(activityData) {
     console.log('Activity stored successfully');
   } catch (error) {
     console.error('Activity log error:', error.message);
-  }
-}
-
-// Helper function to log to Supabase (async, don't wait)
-async function logToSupabase(eventData) {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return;
-  }
-
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/events`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_SERVICE_ROLE_KEY
-      },
-      body: JSON.stringify(eventData)
-    });
-  } catch (error) {
-    console.error('Supabase log error:', error.message);
   }
 }
 
@@ -274,9 +377,7 @@ export default async function handler(req, res) {
     }
 
     const { file_key, comment } = data;
-    // Handle both array and object formats for comment data
     const commentData = Array.isArray(comment) ? comment[0] : comment;
-    // Handle both 'message' and 'text' fields for different webhook formats
     const message = commentData?.message || commentData?.text || '';
 
     // Check for @buddy mention
@@ -287,28 +388,40 @@ export default async function handler(req, res) {
 
     console.log('Processing @buddy comment:', message);
 
+    // Get user by Figma handle
+    const figmaHandle = data.triggered_by?.handle || commentData?.triggered_by?.handle || commentData?.user?.name;
+    let user = null;
+    let userContext = null;
+    
+    if (figmaHandle) {
+      user = await getUserByFigmaHandle(figmaHandle);
+      if (user) {
+        userContext = await getUserContext(user.id);
+        console.log('User context loaded:', userContext ? 'Yes' : 'No');
+      }
+    }
+
     // Log activity start
     await logActivity({
-      user: data.triggered_by?.handle || commentData?.triggered_by?.handle || commentData?.user?.name || 'Unknown',
+      user: figmaHandle || 'Unknown',
       message: message,
       file_key: file_key,
       comment_id: data.comment_id || commentData?.comment_id || commentData?.id,
       status: 'processing',
       stage: 'webhook_received',
+      has_context: !!userContext,
       timestamp: new Date().toISOString()
     });
 
     // Extract the ask after @buddy
     const ask = message.replace(/.*@buddy\s*/i, '').trim() || 'General critique this frame';
     
-    // Check for image attachments in the comment
+    // Check for image attachments
     let imageUrl = null;
     let imageIncluded = false;
     let imageSource = 'none';
 
-    // First, check if there's an image attachment in the comment
     if (commentData?.attachments && commentData.attachments.length > 0) {
-      // Get the first image attachment
       const imageAttachment = commentData.attachments.find(att => 
         att.type === 'image' || att.mime_type?.startsWith('image/')
       );
@@ -321,7 +434,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // If no attachment, check if user wants visual analysis from Figma node
+    // Check if user wants visual analysis from Figma node
     const wantsVisual = /visual|image|see|look/i.test(ask);
     
     if (!imageIncluded && wantsVisual) {
@@ -335,19 +448,17 @@ export default async function handler(req, res) {
         } catch (error) {
           console.log('Figma export failed, continuing with text-only:', error.message);
         }
-      } else {
-        console.log('No node ID found for visual analysis, using text-only');
       }
     }
 
-    // Get AI critique (with or without visual)
+    // Get AI critique with user context
     const aiStartTime = Date.now();
     let critique = '';
     let success = true;
     let error = null;
 
     try {
-      critique = await getAICritique(ask, imageUrl);
+      critique = await getAICritique(ask, imageUrl, userContext, user?.id);
       console.log('AI critique generated in', Date.now() - aiStartTime, 'ms', imageIncluded ? '(with visual)' : '(text-only)');
     } catch (err) {
       success = false;
@@ -358,7 +469,7 @@ export default async function handler(req, res) {
 
     const totalLatency = Date.now() - startTime;
 
-    // Reply to the comment in Figma (this should create a reply, not a new comment)
+    // Reply to the comment in Figma
     const commentId = data.comment_id || commentData?.comment_id || commentData?.id;
     try {
       await replyToComment(file_key, commentId, critique);
@@ -366,13 +477,14 @@ export default async function handler(req, res) {
       
       // Log successful activity
       await logActivity({
-        user: data.triggered_by?.handle || commentData?.triggered_by?.handle || commentData?.user?.name || 'Unknown',
+        user: figmaHandle || 'Unknown',
         message: message,
         file_key: file_key,
         comment_id: commentId,
         status: 'success',
         stage: 'figma_reply_sent',
         latency: totalLatency,
+        has_context: !!userContext,
         critique: critique.substring(0, 100) + '...',
         timestamp: new Date().toISOString()
       });
@@ -382,7 +494,7 @@ export default async function handler(req, res) {
       
       // Log failed activity
       await logActivity({
-        user: data.triggered_by?.handle || commentData?.triggered_by?.handle || commentData?.user?.name || 'Unknown',
+        user: figmaHandle || 'Unknown',
         message: message,
         file_key: file_key,
         comment_id: commentId,
@@ -390,6 +502,7 @@ export default async function handler(req, res) {
         stage: 'figma_reply_failed',
         error: err.message,
         latency: totalLatency,
+        has_context: !!userContext,
         timestamp: new Date().toISOString()
       });
       
@@ -399,25 +512,13 @@ export default async function handler(req, res) {
       });
     }
 
-    // Log to Supabase (async, don't wait)
-    logToSupabase({
-      file_key: file_key,
-      comment_id: commentId,
-      node_id: imageSource === 'figma-export' ? extractNodeIdFromMessage(message) : null,
-      scope: ask.startsWith('/') ? ask.split(' ')[0] : 'full',
-      image_included: imageIncluded,
-      image_source: imageSource,
-      model: 'gpt-4o-mini',
-      latency_ms: totalLatency,
-      ok: success,
-      error: error
-    });
-
     return res.status(200).json({ 
       ok: true, 
       message: 'Processed @buddy comment successfully',
       critique: critique.substring(0, 100) + '...',
-      latency_ms: totalLatency
+      latency_ms: totalLatency,
+      has_context: !!userContext,
+      user_id: user?.id || null
     });
 
   } catch (error) {
