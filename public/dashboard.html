@@ -598,7 +598,7 @@
             };
 
             try {
-                const response = await fetch('/api/context/update', {
+                const response = await fetch('/api/context/get', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -635,12 +635,13 @@
             }
 
             try {
-                const response = await fetch('/api/auth/update-api-key', {
+                const response = await fetch('/api/auth/signup', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        action: 'update-api-key',
                         userId,
                         apiKey
                     })
