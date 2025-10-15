@@ -32,36 +32,42 @@ figma.ui.onmessage = async (msg) => {
 // Analyze current design
 async function handleAnalyzeDesign(data) {
   try {
-    const { prompt, settings } = data;
+    const { prompt, settings, includeVisual = true } = data;
     
     // Get current selection or page
     const selection = figma.currentPage.selection;
     let analysisTarget = 'current page';
+    let visualData = null;
     
     if (selection.length > 0) {
       analysisTarget = `${selection.length} selected element(s)`;
+      
+      // Get visual data for selected frames/components
+      if (includeVisual) {
+        visualData = await getVisualData(selection);
+      }
     }
     
     // Create analysis prompt
     const analysisPrompt = `${prompt}\n\nAnalyzing: ${analysisTarget}`;
     
-    // Call our API
-    const response = await fetch(`${API_BASE}/api/figma-webhook`, {
+    // Call our API with visual data
+    const response = await fetch(`${API_BASE}/api/figma-plugin`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        prompt: analysisPrompt,
+        settings: settings,
         file_key: figma.fileKey,
-        comment: [{
-          message: analysisPrompt,
-          id: 'plugin-analysis-' + Date.now()
-        }],
-        triggered_by: {
-          handle: figma.currentUser?.name || 'Plugin User'
-        },
-        plugin_mode: true,
-        settings: settings
+        user: figma.currentUser?.name || 'Plugin User',
+        visual_data: visualData,
+        selection_info: {
+          count: selection.length,
+          types: selection.map(node => node.type),
+          names: selection.map(node => node.name)
+        }
       })
     });
     
@@ -74,6 +80,7 @@ async function handleAnalyzeDesign(data) {
         data: {
           critique: result.critique,
           target: analysisTarget,
+          visual_analyzed: !!visualData,
           timestamp: new Date().toISOString()
         }
       });
@@ -87,6 +94,44 @@ async function handleAnalyzeDesign(data) {
       type: 'error',
       message: 'Analysis failed: ' + error.message
     });
+  }
+}
+
+// Get visual data for selected elements
+async function getVisualData(selection) {
+  try {
+    const visualElements = [];
+    
+    for (const node of selection) {
+      if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+        // Export the node as an image
+        const imageData = await node.exportAsync({
+          format: 'PNG',
+          constraint: { type: 'SCALE', value: 2 }
+        });
+        
+        // Convert to base64
+        const base64 = figma.base64Encode(imageData);
+        
+        visualElements.push({
+          id: node.id,
+          name: node.name,
+          type: node.type,
+          image: `data:image/png;base64,${base64}`,
+          bounds: {
+            x: node.x,
+            y: node.y,
+            width: node.width,
+            height: node.height
+          }
+        });
+      }
+    }
+    
+    return visualElements;
+  } catch (error) {
+    console.error('Error getting visual data:', error);
+    return null;
   }
 }
 

@@ -19,9 +19,15 @@ export default async function handler(req, res) {
   const startTime = Date.now();
 
   try {
-    const { prompt, settings, file_key, user } = req.body;
+    const { prompt, settings, file_key, user, visual_data, selection_info } = req.body;
     
-    console.log('[buddy] Plugin request received:', { prompt, file_key, user });
+    console.log('[buddy] Plugin request received:', { 
+      prompt, 
+      file_key, 
+      user, 
+      has_visual: !!visual_data,
+      selection_count: selection_info?.count || 0
+    });
 
     if (!prompt) {
       return res.status(400).json({ 
@@ -30,11 +36,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // Build AI prompt with settings
-    const aiPrompt = buildAIPrompt(prompt, settings);
+    // Build AI prompt with settings and visual data
+    const aiPrompt = buildAIPrompt(prompt, settings, visual_data);
     
-    // Get AI critique
-    const critique = await getAICritique(aiPrompt);
+    // Get AI critique with visual analysis
+    const critique = await getAICritique(aiPrompt, visual_data);
 
     // Log activity
     const latency = Date.now() - startTime;
@@ -58,8 +64,8 @@ export default async function handler(req, res) {
   }
 }
 
-// Build AI prompt with user settings
-function buildAIPrompt(prompt, settings = {}) {
+// Build AI prompt with user settings and visual data
+function buildAIPrompt(prompt, settings = {}, visualData = null) {
   const { length = 'detailed', tone = 'professional', focus = ['ux', 'visual'] } = settings;
   
   const lengthInstructions = {
@@ -100,17 +106,57 @@ Structure with short headers and bullets. No fluff. Offer alternatives tied to t
   systemPrompt += `\n${toneInstructions[tone] || toneInstructions.professional}`;
   systemPrompt += `\n${lengthInstructions[length] || lengthInstructions.detailed}`;
 
+  // Add visual analysis instructions if visual data is provided
+  if (visualData && visualData.length > 0) {
+    systemPrompt += `\n\nYou will receive visual data of the selected Figma elements. Analyze the actual visual design, layout, colors, typography, spacing, and overall composition. Be specific about what you see in the images.`;
+  }
+
   return {
     systemPrompt,
     userPrompt: prompt,
     maxTokens: length === 'brief' ? 500 : length === 'comprehensive' ? 2000 : 1000,
-    temperature: tone === 'critical' ? 0.8 : 0.7
+    temperature: tone === 'critical' ? 0.8 : 0.7,
+    hasVisual: !!visualData
   };
 }
 
-// Get AI critique from OpenAI
-async function getAICritique(aiPrompt) {
-  const { systemPrompt, userPrompt, maxTokens, temperature } = aiPrompt;
+// Get AI critique from OpenAI with visual analysis
+async function getAICritique(aiPrompt, visualData = null) {
+  const { systemPrompt, userPrompt, maxTokens, temperature, hasVisual } = aiPrompt;
+
+  // Build messages array
+  const messages = [
+    { role: 'system', content: systemPrompt }
+  ];
+
+  if (hasVisual && visualData && visualData.length > 0) {
+    // Create visual analysis message with images
+    const visualContent = [
+      { type: 'text', text: userPrompt }
+    ];
+
+    // Add each visual element as an image
+    visualData.forEach((element, index) => {
+      visualContent.push({
+        type: 'image_url',
+        image_url: {
+          url: element.image,
+          detail: 'high'
+        }
+      });
+    });
+
+    messages.push({
+      role: 'user',
+      content: visualContent
+    });
+  } else {
+    // Text-only analysis
+    messages.push({
+      role: 'user',
+      content: userPrompt
+    });
+  }
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -120,10 +166,7 @@ async function getAICritique(aiPrompt) {
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
+      messages: messages,
       max_tokens: maxTokens,
       temperature: temperature
     })

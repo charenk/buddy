@@ -221,6 +221,16 @@
         </div>
       </div>
 
+      <div class="form-group">
+        <div class="checkbox-item">
+          <input type="checkbox" id="include-visual" checked>
+          <label for="include-visual">Include Visual Analysis (analyze selected frames/components)</label>
+        </div>
+        <p style="font-size: 0.8rem; color: #666; margin-top: 5px;">
+          When enabled, the AI will analyze the actual visual appearance of selected elements.
+        </p>
+      </div>
+
       <button type="submit" class="btn">Analyze Design</button>
     </form>
 
@@ -306,13 +316,17 @@
       showMessage('Analyzing design...', 'success');
       document.getElementById('results').classList.add('hidden');
 
+      // Get visual analysis option
+      const includeVisual = document.getElementById('include-visual').checked;
+
       // Send analysis request
       parent.postMessage({
         pluginMessage: {
           type: 'analyze-design',
           data: {
             prompt: prompt,
-            settings: currentSettings
+            settings: currentSettings,
+            includeVisual: includeVisual
           }
         }
       }, '*');
