@@ -407,6 +407,7 @@
                     </div>
 
                     <button type="submit" class="btn">Save Preferences</button>
+                    <button type="button" class="btn" onclick="testSave()" style="margin-left: 10px; background: #6c757d;">Test Save</button>
                 </form>
             </div>
 
@@ -633,23 +634,37 @@
 
         // Save context
         async function saveContext() {
-            const userId = getUserId();
-            if (!userId) return;
-
-            const formData = new FormData(document.getElementById('context-form'));
-            const context = {
-                length: formData.get('length'),
-                tone: formData.get('tone'),
-                focus: Array.from(formData.getAll('focus')),
-                domain: formData.get('domain'),
-                language: formData.get('language'),
-                custom_prompts: {
-                    focusInstructions: formData.get('custom_instructions') || ''
-                }
-            };
-
             try {
-                // Save to localStorage for persistence (working solution)
+                console.log('Save context called');
+                
+                const form = document.getElementById('context-form');
+                if (!form) {
+                    console.error('Form not found!');
+                    showError('Form not found. Please refresh the page.');
+                    return;
+                }
+                
+                const formData = new FormData(form);
+                const context = {
+                    length: formData.get('length'),
+                    tone: formData.get('tone'),
+                    focus: Array.from(formData.getAll('focus')),
+                    domain: formData.get('domain'),
+                    language: formData.get('language'),
+                    custom_prompts: {
+                        focusInstructions: formData.get('custom_instructions') || ''
+                    }
+                };
+                
+                console.log('Form data extracted:', context);
+
+                // Get or create user ID
+                let userId = getUserId();
+                if (!userId) {
+                    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                }
+
+                // Save to localStorage for persistence
                 localStorage.setItem('buddyContext', JSON.stringify(context));
                 localStorage.setItem('buddyUserId', userId);
                 
@@ -660,6 +675,7 @@
                 showSuccess('Settings saved successfully!');
                 
                 console.log('Context saved locally:', context);
+                console.log('User ID:', userId);
                 
             } catch (error) {
                 console.error('Error saving context:', error);
@@ -734,6 +750,30 @@
             e.preventDefault();
             saveContext();
         });
+
+        // Test save function
+        function testSave() {
+            console.log('Test save called');
+            try {
+                const context = {
+                    length: 'detailed',
+                    tone: 'professional',
+                    focus: ['ux', 'visual'],
+                    domain: 'general',
+                    language: 'en',
+                    custom_prompts: {
+                        focusInstructions: 'Test instructions'
+                    }
+                };
+                
+                localStorage.setItem('buddyContext', JSON.stringify(context));
+                showSuccess('Test save successful!');
+                console.log('Test context saved:', context);
+            } catch (error) {
+                console.error('Test save error:', error);
+                showError('Test save failed: ' + error.message);
+            }
+        }
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', initDashboard);
