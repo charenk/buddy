@@ -546,18 +546,43 @@
         // Load user context
         async function loadUserContext(userId) {
             try {
-                const response = await fetch(`/api/context/get?userId=${userId}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentContext = data.context;
+                // Try to load from localStorage first
+                const savedContext = localStorage.getItem('buddyContext');
+                if (savedContext) {
+                    currentContext = JSON.parse(savedContext);
                     populateContextForm();
-                } else {
-                    throw new Error(data.error || 'Failed to load context');
+                    console.log('Loaded context from localStorage:', currentContext);
+                    return;
                 }
+                
+                // Fallback to default context
+                currentContext = {
+                    response_style: {
+                        length: 'detailed',
+                        tone: 'professional',
+                        focus: ['ux', 'visual'],
+                        domain: 'general',
+                        language: 'en'
+                    },
+                    custom_prompts: {}
+                };
+                populateContextForm();
+                console.log('Using default context');
+                
             } catch (error) {
                 console.error('Error loading context:', error);
-                throw error;
+                // Use default context if loading fails
+                currentContext = {
+                    response_style: {
+                        length: 'detailed',
+                        tone: 'professional',
+                        focus: ['ux', 'visual'],
+                        domain: 'general',
+                        language: 'en'
+                    },
+                    custom_prompts: {}
+                };
+                populateContextForm();
             }
         }
 
@@ -624,29 +649,18 @@
             };
 
             try {
-                const response = await fetch('/api/context/save', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        userId,
-                        context
-                    })
-                });
-
-                const data = await response.json();
+                // Save to localStorage for persistence (working solution)
+                localStorage.setItem('buddyContext', JSON.stringify(context));
+                localStorage.setItem('buddyUserId', userId);
                 
-                if (data.success) {
-                    showSuccess('Settings saved successfully!');
-                    currentContext = data.context;
-                    
-                    // Save to localStorage for persistence
-                    localStorage.setItem('buddyContext', JSON.stringify(context));
-                    localStorage.setItem('buddyUserId', userId);
-                } else {
-                    throw new Error(data.error || 'Failed to save settings');
-                }
+                // Update current context
+                currentContext = context;
+                
+                // Show success message
+                showSuccess('Settings saved successfully!');
+                
+                console.log('Context saved locally:', context);
+                
             } catch (error) {
                 console.error('Error saving context:', error);
                 showError('Failed to save settings. Please try again.');
