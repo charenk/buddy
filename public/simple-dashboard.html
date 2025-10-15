@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figma AI Buddy - Simple Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-bottom: 20px; }
+        .form-group { margin: 20px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .btn:hover { background: #0056b3; }
+        .btn-success { background: #28a745; }
+        .btn-danger { background: #dc3545; }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; }
+        .checkbox-item { display: flex; align-items: center; }
+        .checkbox-item input { width: auto; margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Figma AI Buddy - Simple Dashboard</h1>
+        
+        <div id="message"></div>
+        
+        <h2>Response Preferences</h2>
+        <form id="settings-form">
+            <div class="form-group">
+                <label for="length">Response Length:</label>
+                <select id="length" name="length">
+                    <option value="brief">Brief (2-3 points)</option>
+                    <option value="detailed" selected>Detailed (5-7 points)</option>
+                    <option value="comprehensive">Comprehensive (full analysis)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="tone">Response Tone:</label>
+                <select id="tone" name="tone">
+                    <option value="casual">Casual & Friendly</option>
+                    <option value="professional" selected>Professional & Formal</option>
+                    <option value="encouraging">Encouraging & Supportive</option>
+                    <option value="critical">Critical & Direct</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Focus Areas:</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="focus" value="ux" id="focus-ux" checked>
+                        <label for="focus-ux">User Experience</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="focus" value="visual" id="focus-visual" checked>
+                        <label for="focus-visual">Visual Design</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="focus" value="accessibility" id="focus-accessibility">
+                        <label for="focus-accessibility">Accessibility</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="focus" value="performance" id="focus-performance">
+                        <label for="focus-performance">Performance</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="domain">Domain Expertise:</label>
+                <select id="domain" name="domain">
+                    <option value="general" selected>General Design</option>
+                    <option value="mobile_apps">Mobile Apps</option>
+                    <option value="web_apps">Web Applications</option>
+                    <option value="enterprise">Enterprise Software</option>
+                    <option value="ecommerce">E-commerce</option>
+                    <option value="saas">SaaS Products</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="custom_instructions">Custom Instructions (Optional):</label>
+                <textarea id="custom_instructions" name="custom_instructions" rows="3" 
+                    placeholder="Add any specific instructions for how you want the AI to respond..."></textarea>
+            </div>
+            
+            <button type="button" class="btn" onclick="saveSettings()">Save Settings</button>
+            <button type="button" class="btn btn-success" onclick="testSave()">Test Save</button>
+            <button type="button" class="btn btn-danger" onclick="clearSettings()">Clear Settings</button>
+        </form>
+        
+        <h2>Current Settings</h2>
+        <div id="current-settings">
+            <p>No settings saved yet.</p>
+        </div>
+        
+        <h2>Webhook Setup</h2>
+        <div style="background: #e9ecef; padding: 15px; border-radius: 5px;">
+            <h3>Set up Figma Webhook:</h3>
+            <ol>
+                <li>Go to <a href="https://www.figma.com/developers" target="_blank">Figma Developer Portal</a></li>
+                <li>Create a new webhook</li>
+                <li>Use this URL: <code>https://buddy-lac-five.vercel.app/api/figma-webhook-account-simple</code></li>
+                <li>Event Type: <code>FILE_COMMENT</code></li>
+                <li>Scope: <code>All files</code> or <code>Account level</code></li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Show message function
+        function showMessage(text, type = 'success') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        // Save settings function
+        function saveSettings() {
+            try {
+                console.log('Saving settings...');
+                
+                // Get form data
+                const form = document.getElementById('settings-form');
+                const formData = new FormData(form);
+                
+                // Extract settings
+                const settings = {
+                    length: formData.get('length'),
+                    tone: formData.get('tone'),
+                    focus: formData.getAll('focus'),
+                    domain: formData.get('domain'),
+                    custom_instructions: formData.get('custom_instructions') || ''
+                };
+                
+                console.log('Settings extracted:', settings);
+                
+                // Save to localStorage
+                localStorage.setItem('buddySettings', JSON.stringify(settings));
+                
+                // Update display
+                updateCurrentSettings();
+                
+                // Show success
+                showMessage('Settings saved successfully!', 'success');
+                console.log('Settings saved to localStorage');
+                
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showMessage('Error saving settings: ' + error.message, 'error');
+            }
+        }
+
+        // Test save function
+        function testSave() {
+            try {
+                const testSettings = {
+                    length: 'detailed',
+                    tone: 'professional',
+                    focus: ['ux', 'visual'],
+                    domain: 'general',
+                    custom_instructions: 'Test instructions'
+                };
+                
+                localStorage.setItem('buddySettings', JSON.stringify(testSettings));
+                showMessage('Test save successful!', 'success');
+                updateCurrentSettings();
+                console.log('Test settings saved:', testSettings);
+                
+            } catch (error) {
+                console.error('Test save error:', error);
+                showMessage('Test save failed: ' + error.message, 'error');
+            }
+        }
+
+        // Clear settings function
+        function clearSettings() {
+            localStorage.removeItem('buddySettings');
+            showMessage('Settings cleared!', 'success');
+            updateCurrentSettings();
+            console.log('Settings cleared');
+        }
+
+        // Update current settings display
+        function updateCurrentSettings() {
+            const settingsDiv = document.getElementById('current-settings');
+            const saved = localStorage.getItem('buddySettings');
+            
+            if (saved) {
+                const settings = JSON.parse(saved);
+                settingsDiv.innerHTML = `
+                    <p><strong>Length:</strong> ${settings.length}</p>
+                    <p><strong>Tone:</strong> ${settings.tone}</p>
+                    <p><strong>Focus:</strong> ${settings.focus.join(', ')}</p>
+                    <p><strong>Domain:</strong> ${settings.domain}</p>
+                    <p><strong>Custom Instructions:</strong> ${settings.custom_instructions || 'None'}</p>
+                `;
+            } else {
+                settingsDiv.innerHTML = '<p>No settings saved yet.</p>';
+            }
+        }
+
+        // Load saved settings on page load
+        function loadSettings() {
+            const saved = localStorage.getItem('buddySettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                
+                // Set form values
+                document.getElementById('length').value = settings.length || 'detailed';
+                document.getElementById('tone').value = settings.tone || 'professional';
+                document.getElementById('domain').value = settings.domain || 'general';
+                document.getElementById('custom_instructions').value = settings.custom_instructions || '';
+                
+                // Set checkboxes
+                const focusCheckboxes = document.querySelectorAll('input[name="focus"]');
+                focusCheckboxes.forEach(checkbox => {
+                    checkbox.checked = settings.focus && settings.focus.includes(checkbox.value);
+                });
+                
+                updateCurrentSettings();
+                console.log('Settings loaded from localStorage:', settings);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Simple dashboard loaded');
+            loadSettings();
+        });
+    </script>
+</body>
+</html>
