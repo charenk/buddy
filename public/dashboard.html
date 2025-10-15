@@ -624,7 +624,7 @@
             };
 
             try {
-                const response = await fetch('/api/context/get', {
+                const response = await fetch('/api/context/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -640,6 +640,10 @@
                 if (data.success) {
                     showSuccess('Settings saved successfully!');
                     currentContext = data.context;
+                    
+                    // Save to localStorage for persistence
+                    localStorage.setItem('buddyContext', JSON.stringify(context));
+                    localStorage.setItem('buddyUserId', userId);
                 } else {
                     throw new Error(data.error || 'Failed to save settings');
                 }
