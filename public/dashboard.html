@@ -502,6 +502,31 @@
         // Load user data
         async function loadUserData(userId) {
             try {
+                // For now, create a test user if none exists
+                if (!userId) {
+                    const response = await fetch('/api/auth/working-signup', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            action: 'create',
+                            email: 'test@example.com',
+                            figma_handle: 'testuser',
+                            figma_user_id: 'test123'
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        currentUser = data.dashboard;
+                        localStorage.setItem('userId', data.user.id);
+                        updateUserStats();
+                        return;
+                    }
+                }
+                
+                // If we have a userId, try to load context
                 const response = await fetch(`/api/context/get?userId=${userId}`);
                 const data = await response.json();
                 
@@ -635,7 +660,7 @@
             }
 
             try {
-                const response = await fetch('/api/auth/signup', {
+                const response = await fetch('/api/auth/working-signup', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
