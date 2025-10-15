@@ -476,8 +476,9 @@
                 // Get user ID from URL or localStorage
                 const userId = getUserId();
                 if (!userId) {
-                    // Redirect to signup if no user ID
-                    window.location.href = '/signup.html';
+                    // Create a test user automatically instead of redirecting
+                    console.log('No user ID found, creating test user...');
+                    await loadUserData(null);
                     return;
                 }
 
