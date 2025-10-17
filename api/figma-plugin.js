@@ -19,14 +19,16 @@ export default async function handler(req, res) {
   const startTime = Date.now();
 
   try {
-    const { prompt, settings, file_key, user, visual_data, selection_info } = req.body;
+    const { prompt, settings, context, file_key, user, visual_data, selection_info } = req.body;
     
     console.log('[buddy] Plugin request received:', { 
       prompt, 
       file_key, 
       user, 
       has_visual: !!visual_data,
-      selection_count: selection_info?.count || 0
+      has_context: !!context,
+      context_length: (context && context.length) || 0,
+      selection_count: (selection_info && selection_info.count) || 0
     });
 
     if (!prompt) {
@@ -36,8 +38,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Build AI prompt with settings and visual data
-    const aiPrompt = buildAIPrompt(prompt, settings, visual_data);
+    // Build AI prompt with settings, context, and visual data
+    const aiPrompt = buildAIPrompt(prompt, settings, context, visual_data);
     
     // Get AI critique with visual analysis
     const critique = await getAICritique(aiPrompt, visual_data);
@@ -64,8 +66,8 @@ export default async function handler(req, res) {
   }
 }
 
-// Build AI prompt with user settings and visual data
-function buildAIPrompt(prompt, settings = {}, visualData = null) {
+// Build AI prompt with user settings, context, and visual data
+function buildAIPrompt(prompt, settings = {}, context = '', visualData = null) {
   const { length = 'detailed', tone = 'professional', focus = ['ux', 'visual'] } = settings;
   
   const lengthInstructions = {
@@ -101,6 +103,11 @@ Be direct, specific, and practical. Always:
 7) Metrics to validate.
 
 Structure with short headers and bullets. No fluff. Offer alternatives tied to the problem.`;
+
+  // Add context if provided
+  if (context && context.trim()) {
+    systemPrompt += `\n\nIMPORTANT CONTEXT: The user has provided the following product/domain context that you should consider in your analysis:\n"${context.trim()}"\n\nUse this context to provide more relevant and specific feedback. Reference the user's product, target audience, design system, or brand guidelines when applicable.`;
+  }
 
   systemPrompt += `\n\nFocus areas: ${focus.map(f => focusAreas[f] || f).join(', ')}.`;
   systemPrompt += `\n${toneInstructions[tone] || toneInstructions.professional}`;
@@ -177,5 +184,5 @@ async function getAICritique(aiPrompt, visualData = null) {
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content?.trim() || 'No response generated.';
+  return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ? data.choices[0].message.content.trim() : 'No response generated.';
 }

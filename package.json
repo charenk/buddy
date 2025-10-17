@@ -2,6 +2,7 @@
   "name": "buddy",
   "version": "1.0.0",
   "description": "AI design critique assistant for Figma",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "dev": "vercel dev",
