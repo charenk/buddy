@@ -27,6 +27,7 @@
   "env": {
     "NODE_ENV": "production"
   },
+  "buildCommand": "echo 'Building with latest commit'",
   "functions": {
     "api/auth.js": {
       "maxDuration": 30
