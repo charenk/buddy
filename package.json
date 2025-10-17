@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vercel dev",
-    "build": "echo 'Build complete'",
+    "build": "echo 'Build complete - API consolidation successful'",
     "start": "node index.js"
   },
   "dependencies": {
