@@ -2,7 +2,19 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/**/*.js",
+      "src": "api/auth.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/user.js", 
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/figma-plugin.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/figma-comment-webhook.js",
       "use": "@vercel/node"
     }
   ],
@@ -16,7 +28,16 @@
     "NODE_ENV": "production"
   },
   "functions": {
-    "api/**/*.js": {
+    "api/auth.js": {
+      "maxDuration": 30
+    },
+    "api/user.js": {
+      "maxDuration": 30
+    },
+    "api/figma-plugin.js": {
+      "maxDuration": 30
+    },
+    "api/figma-comment-webhook.js": {
       "maxDuration": 30
     }
   },
