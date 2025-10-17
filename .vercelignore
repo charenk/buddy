@@ -1,0 +1,38 @@
+# Ignore old API files that were consolidated
+api/auth/
+api/user/
+api/webhook/
+api/context/
+api/users/
+api/monitor.js
+api/activity.js
+api/setup-account-webhook.js
+api/test-*.js
+api/figma-webhook-account*.js
+api/figma-webhook.js
+
+# Ignore test files
+test-*.js
+*.test.js
+
+# Ignore documentation
+*.md
+docs/
+
+# Ignore development files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignore node_modules (should be handled by Vercel)
+node_modules/
+
+# Ignore Git files
+.git/
+.gitignore
+
+# Ignore other development files
+*.log
+.DS_Store

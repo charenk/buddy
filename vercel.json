@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "echo 'Building latest commit with 4 API functions only'",
   "builds": [
     {
       "src": "api/auth.js",
