@@ -4,10 +4,13 @@
 !api/figma-plugin.js
 !api/figma-comment-webhook.js
 
+# Allow lib directory (needed by API functions)
+!lib/
+
 # Ignore all other JavaScript files that could be detected as functions
-lib/
 *.js
 !api/*.js
+!lib/*.js
 
 # Ignore test files
 test-*.js
