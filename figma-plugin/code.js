@@ -46,7 +46,7 @@ async function setupWebhook() {
     }
 
     // Send webhook setup request to backend
-    const response = await fetch('https://buddy-lac-five.vercel.app/api/simple-webhook', {
+    const response = await fetch('https://buddy-2awfq6w7x-charenkoneti-cyberqpcoms-projects.vercel.app/api/simple-webhook', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ async function setupWebhook() {
       body: JSON.stringify({
         figmaUserId: user.id,
         figmaUserName: user.name,
-        webhookUrl: 'https://buddy-lac-five.vercel.app/api/figma-comment-webhook'
+        webhookUrl: 'https://buddy-2awfq6w7x-charenkoneti-cyberqpcoms-projects.vercel.app/api/figma-comment-webhook'
       })
     });
 
