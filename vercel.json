@@ -1,33 +1,6 @@
 {
   "version": 2,
   "buildCommand": "echo 'Building with 4 API functions only - ignoring all other JS files'",
-  "builds": [
-    {
-      "src": "api/auth.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/user.js", 
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/figma-plugin.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/figma-comment-webhook.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  },
   "functions": {
     "api/auth.js": {
       "maxDuration": 30
@@ -41,6 +14,15 @@
     "api/figma-comment-webhook.js": {
       "maxDuration": 30
     }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
   },
   "headers": [
     {
