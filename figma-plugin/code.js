@@ -39,12 +39,36 @@ async function processAllBuddyComments() {
   try {
     console.log('🔍 Processing all @buddy comments...');
     
+    // Check if comments exist and are iterable
+    if (!figma.currentPage.comments) {
+      console.log('Comments API not available');
+      figma.ui.postMessage({
+        type: 'no-comments-found',
+        message: 'ℹ️ Comments API not available. Please add a comment with "@buddy" to any frame first, then try again.'
+      });
+      return;
+    }
+    
+    // Check if comments are iterable
+    if (typeof figma.currentPage.comments[Symbol.iterator] !== 'function') {
+      console.log('Comments not iterable, trying alternative approach');
+      figma.ui.postMessage({
+        type: 'no-comments-found',
+        message: 'ℹ️ Comments not accessible. Please add a comment with "@buddy" to any frame first, then try again.'
+      });
+      return;
+    }
+    
     // Get all comments from the current page
     const comments = figma.currentPage.comments;
     let processedCount = 0;
     
-    for (const comment of comments) {
-      if (comment.message && comment.message.toLowerCase().includes('@buddy') && !comment.resolved) {
+    // Convert to array to ensure it's iterable
+    const commentsArray = Array.from(comments);
+    console.log(`Found ${commentsArray.length} total comments`);
+    
+    for (const comment of commentsArray) {
+      if (comment && comment.message && comment.message.toLowerCase().includes('@buddy') && !comment.resolved) {
         console.log('Found @buddy comment:', comment.message);
         await processBuddyComment(comment);
         processedCount++;
