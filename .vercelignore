@@ -1,19 +1,18 @@
-# Ignore old API files that were consolidated
-api/auth/
-api/user/
-api/webhook/
-api/context/
-api/users/
-api/monitor.js
-api/activity.js
-api/setup-account-webhook.js
-api/test-*.js
-api/figma-webhook-account*.js
-api/figma-webhook.js
+# Only allow specific API functions
+!api/auth.js
+!api/user.js
+!api/figma-plugin.js
+!api/figma-comment-webhook.js
+
+# Ignore all other JavaScript files that could be detected as functions
+lib/
+*.js
+!api/*.js
 
 # Ignore test files
 test-*.js
 *.test.js
+setup-*.js
 
 # Ignore documentation
 *.md
