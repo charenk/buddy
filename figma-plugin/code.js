@@ -312,6 +312,13 @@ async function extractFrameData(frame) {
 async function createAuditComments(frame, issues, auditType) {
   console.log(`Creating ${issues.length} comments for ${auditType} audit`);
   
+  // Load fonts before creating any text content
+  try {
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  } catch (error) {
+    console.log('Font loading failed:', error);
+  }
+  
   // Check if we can create comments at all
   let canCreateComments = true;
   try {
@@ -385,6 +392,15 @@ async function createAuditComments(frame, issues, auditType) {
  */
 async function createVisualBubbles(frame, issues, auditType) {
   console.log(`Creating ${issues.length} visual bubbles for ${auditType} audit`);
+  
+  // Load fonts before creating text nodes
+  try {
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+    await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+    await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
+  } catch (error) {
+    console.log('Font loading failed, using default fonts:', error);
+  }
   
   // Create a container frame for all bubbles
   const container = figma.createFrame();
