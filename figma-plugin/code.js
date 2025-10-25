@@ -4,7 +4,7 @@
 console.log('🔍 Design System & Accessibility Audit Plugin initialized!');
 
 // Show the plugin UI
-figma.showUI(__html__, { width: 450, height: 600 });
+figma.showUI(__html__, { width: 400, height: 500 });
 
 // Handle messages from the UI
 figma.ui.onmessage = async (msg) => {
