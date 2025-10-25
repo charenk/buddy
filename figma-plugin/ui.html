@@ -134,26 +134,6 @@
       transform: none;
     }
 
-    .status {
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      font-size: 14px;
-      text-align: center;
-    }
-
-    .status.monitoring {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-
-    .status.stopped {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-
     .message {
       padding: 12px;
       border-radius: 8px;
@@ -203,6 +183,29 @@
       color: #28a745;
       font-weight: bold;
     }
+
+    .step {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .step-number {
+      background: #667eea;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      margin-right: 8px;
+    }
   </style>
 </head>
 <body>
@@ -215,12 +218,18 @@
 
     <div class="instructions">
       <h3>How to use @buddy comments:</h3>
-      <ol>
-        <li>Select any frame or element in your design</li>
-        <li>Add a comment with "@buddy" and your question</li>
-        <li>AI will analyze the visual design and reply</li>
-        <li>Get instant feedback on colors, layout, spacing, etc.</li>
-      </ol>
+      <div class="step">
+        <span class="step-number">1</span>
+        Add a comment with "@buddy" to any frame
+      </div>
+      <div class="step">
+        <span class="step-number">2</span>
+        Click "Check for @buddy Comments" below
+      </div>
+      <div class="step">
+        <span class="step-number">3</span>
+        AI will analyze and reply to your comment
+      </div>
       
       <div class="comment-example">
         <strong>Example comments:</strong><br>
@@ -232,22 +241,9 @@
     </div>
 
     <div class="section">
-      <h2 class="section-title">Comment Monitoring</h2>
+      <h2 class="section-title">@buddy Comment Processing</h2>
       
-      <div id="status" class="status stopped">
-        ⏹️ Comment monitoring stopped
-      </div>
-      
-      <button id="start-monitoring" class="btn">Start Monitoring @buddy Comments</button>
-      <button id="stop-monitoring" class="btn btn-secondary" disabled>Stop Monitoring</button>
-    </div>
-
-    <div class="section">
-      <h2 class="section-title">Manual Analysis</h2>
-      <p style="margin-bottom: 16px; font-size: 14px; color: #666;">
-        Or select a frame/element and analyze it manually:
-      </p>
-      
+      <button id="check-comments" class="btn">Check for @buddy Comments</button>
       <button id="analyze-selection" class="btn btn-secondary">Analyze Selected Element</button>
     </div>
 
@@ -262,6 +258,7 @@
         <li>Accessibility considerations</li>
         <li>Visual hierarchy</li>
         <li>Design consistency</li>
+        <li>Kids-friendly design (UAE market)</li>
       </ul>
     </div>
 
@@ -271,18 +268,12 @@
   </div>
 
   <script>
-    let isMonitoring = false;
-    let monitoringInterval = null;
-
     // Initialize plugin
     function initPlugin() {
-      showMessage('Plugin loaded! Start monitoring to watch for @buddy comments.', 'info');
+      showMessage('Plugin loaded! Add @buddy comments to frames, then click "Check for @buddy Comments".', 'info');
       
-      // Handle start monitoring
-      document.getElementById('start-monitoring').addEventListener('click', startMonitoring);
-      
-      // Handle stop monitoring
-      document.getElementById('stop-monitoring').addEventListener('click', stopMonitoring);
+      // Handle check comments
+      document.getElementById('check-comments').addEventListener('click', checkComments);
       
       // Handle manual analysis
       document.getElementById('analyze-selection').addEventListener('click', analyzeSelection);
@@ -291,44 +282,25 @@
       document.getElementById('close-btn').addEventListener('click', closePlugin);
     }
 
-    // Start monitoring @buddy comments
-    function startMonitoring() {
-      if (isMonitoring) return;
+    // Check for @buddy comments
+    function checkComments() {
+      const checkBtn = document.getElementById('check-comments');
+      const originalText = checkBtn.textContent;
       
-      isMonitoring = true;
-      updateStatus('monitoring', '🔍 Monitoring @buddy comments...');
+      checkBtn.disabled = true;
+      checkBtn.textContent = 'Checking...';
       
-      document.getElementById('start-monitoring').disabled = true;
-      document.getElementById('stop-monitoring').disabled = false;
-      
-      // Send message to plugin code to start monitoring
       parent.postMessage({
         pluginMessage: {
-          type: 'monitor-comments'
+          type: 'check-comments'
         }
       }, '*');
       
-      showMessage('Started monitoring! Add @buddy comments to any frame to get AI analysis.', 'success');
-    }
-
-    // Stop monitoring
-    function stopMonitoring() {
-      if (!isMonitoring) return;
-      
-      isMonitoring = false;
-      updateStatus('stopped', '⏹️ Comment monitoring stopped');
-      
-      document.getElementById('start-monitoring').disabled = false;
-      document.getElementById('stop-monitoring').disabled = true;
-      
-      // Send message to plugin code to stop monitoring
-      parent.postMessage({
-        pluginMessage: {
-          type: 'stop-monitoring'
-        }
-      }, '*');
-      
-      showMessage('Stopped monitoring @buddy comments.', 'info');
+      // Reset button after a delay
+      setTimeout(() => {
+        checkBtn.disabled = false;
+        checkBtn.textContent = originalText;
+      }, 3000);
     }
 
     // Analyze selected element manually
@@ -354,13 +326,6 @@
       }, 3000);
     }
 
-    // Update status display
-    function updateStatus(type, message) {
-      const statusEl = document.getElementById('status');
-      statusEl.className = `status ${type}`;
-      statusEl.textContent = message;
-    }
-
     // Show message to user
     function showMessage(message, type = 'info') {
       const container = document.getElementById('message-container');
@@ -380,9 +345,6 @@
 
     // Close plugin
     function closePlugin() {
-      if (isMonitoring) {
-        stopMonitoring();
-      }
       parent.postMessage({ pluginMessage: { type: 'close-plugin' } }, '*');
     }
 
@@ -392,12 +354,12 @@
       
       if (msg.type === 'analysis-complete') {
         showMessage(`✅ Analysis complete! Check the comment added to "${msg.elementName || msg.frameName}".`, 'success');
+      } else if (msg.type === 'comments-processed') {
+        showMessage(`✅ Processed ${msg.count} @buddy comment(s)! Check the replies.`, 'success');
+      } else if (msg.type === 'no-comments-found') {
+        showMessage('ℹ️ No @buddy comments found. Add a comment with "@buddy" to any frame first.', 'info');
       } else if (msg.type === 'error') {
         showMessage('❌ ' + msg.message, 'error');
-      } else if (msg.type === 'monitoring-started') {
-        console.log('Comment monitoring started');
-      } else if (msg.type === 'monitoring-stopped') {
-        console.log('Comment monitoring stopped');
       }
     };
 

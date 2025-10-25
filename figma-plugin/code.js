@@ -1,13 +1,10 @@
 // Figma AI Buddy - @buddy Comment System
-// Monitors for @buddy comments and provides AI analysis of frame visual design
+// Simplified approach that works reliably in Figma plugins
 
 console.log('🤖 Figma AI Buddy initialized - @buddy comment system ready!');
 
 // Show the plugin UI
 figma.showUI(__html__, { width: 400, height: 500 });
-
-// Store the current page for monitoring
-let currentPage = figma.currentPage;
 
 // Handle messages from the UI
 figma.ui.onmessage = async (msg) => {
@@ -19,11 +16,8 @@ figma.ui.onmessage = async (msg) => {
       case 'analyze-selection':
         await handleSelectionAnalysis(msg);
         break;
-      case 'monitor-comments':
-        startCommentMonitoring();
-        break;
-      case 'stop-monitoring':
-        stopCommentMonitoring();
+      case 'check-comments':
+        await checkForBuddyComments();
         break;
       case 'close-plugin':
         figma.closePlugin();
@@ -40,49 +34,40 @@ figma.ui.onmessage = async (msg) => {
   }
 };
 
-// Start monitoring for @buddy comments
-function startCommentMonitoring() {
-  console.log('🔍 Starting comment monitoring...');
+// Check for @buddy comments and process them
+async function checkForBuddyComments() {
+  console.log('🔍 Checking for @buddy comments...');
   
-  // Check existing comments for @buddy mentions
-  checkExistingComments();
-  
-  // Set up periodic checking (every 5 seconds)
-  const intervalId = setInterval(checkForNewComments, 5000);
-  
-  // Store interval ID for cleanup
-  figma.ui.postMessage({
-    type: 'monitoring-started',
-    intervalId: intervalId
-  });
-}
-
-// Stop monitoring comments
-function stopCommentMonitoring() {
-  console.log('⏹️ Stopping comment monitoring...');
-  figma.ui.postMessage({
-    type: 'monitoring-stopped'
-  });
-}
-
-// Check existing comments for @buddy mentions
-function checkExistingComments() {
-  const comments = currentPage.comments;
-  comments.forEach(comment => {
-    if (comment.message.toLowerCase().includes('@buddy')) {
-      processBuddyComment(comment);
+  try {
+    const comments = figma.currentPage.comments;
+    let processedCount = 0;
+    
+    for (const comment of comments) {
+      if (comment.message.toLowerCase().includes('@buddy') && !comment.resolved) {
+        console.log('Found @buddy comment:', comment.message);
+        await processBuddyComment(comment);
+        processedCount++;
+      }
     }
-  });
-}
-
-// Check for new @buddy comments
-function checkForNewComments() {
-  const comments = currentPage.comments;
-  comments.forEach(comment => {
-    if (comment.message.toLowerCase().includes('@buddy') && !comment.resolved) {
-      processBuddyComment(comment);
+    
+    if (processedCount > 0) {
+      figma.ui.postMessage({
+        type: 'comments-processed',
+        count: processedCount
+      });
+    } else {
+      figma.ui.postMessage({
+        type: 'no-comments-found'
+      });
     }
-  });
+    
+  } catch (error) {
+    console.error('Error checking comments:', error);
+    figma.ui.postMessage({
+      type: 'error',
+      message: 'Failed to check comments: ' + error.message
+    });
+  }
 }
 
 // Process a @buddy comment
@@ -169,7 +154,6 @@ async function extractNodeInfo(node) {
     info.paddingTop = node.paddingTop;
     info.paddingBottom = node.paddingBottom;
     info.itemSpacing = node.itemSpacing;
-    info.counterAxisSizingMode = node.counterAxisSizingMode;
   }
 
   // Extract information about children
@@ -183,18 +167,6 @@ async function extractNodeInfo(node) {
       cornerRadius: child.cornerRadius,
       visible: child.visible
     }));
-  }
-
-  // Try to get visual representation if possible
-  try {
-    if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') {
-      info.hasVisual = true;
-      // Note: In a real implementation, you might want to export the frame as an image
-      // for more detailed visual analysis, but that requires additional permissions
-    }
-  } catch (error) {
-    console.log('Could not extract visual info:', error);
-    info.hasVisual = false;
   }
 
   return info;
@@ -257,6 +229,22 @@ function generateAIAnalysis(nodeInfo, question) {
   }
   
   // Question-specific analysis
+  if (question.toLowerCase().includes('kids') || question.toLowerCase().includes('children')) {
+    analysis += `\n👶 **Kids-Friendly Design:**\n`;
+    analysis += `- Bright, cheerful colors work well for children\n`;
+    analysis += `- Large, clear text and buttons\n`;
+    analysis += `- Rounded corners are safer and more appealing\n`;
+    analysis += `- Consider playful, engaging visual elements\n`;
+  }
+  
+  if (question.toLowerCase().includes('uae') || question.toLowerCase().includes('market')) {
+    analysis += `\n🌍 **UAE Market Considerations:**\n`;
+    analysis += `- Consider Arabic text support (RTL layout)\n`;
+    analysis += `- Cultural colors and imagery\n`;
+    analysis += `- Mobile-first approach (high mobile usage)\n`;
+    analysis += `- Consider local payment methods and preferences\n`;
+  }
+  
   if (question.toLowerCase().includes('color') || question.toLowerCase().includes('contrast')) {
     analysis += `\n🎨 **Color Analysis:**\n`;
     if (fills && fills.length > 0) {
