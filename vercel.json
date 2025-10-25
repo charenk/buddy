@@ -2,16 +2,13 @@
   "version": 2,
   "buildCommand": "echo 'Building with 4 API functions only - ignoring all other JS files'",
   "functions": {
-    "api/auth.js": {
+    "api/audit.js": {
       "maxDuration": 30
     },
-    "api/user.js": {
+    "api/config.js": {
       "maxDuration": 30
     },
     "api/figma-plugin.js": {
-      "maxDuration": 30
-    },
-    "api/figma-comment-webhook.js": {
       "maxDuration": 30
     }
   },

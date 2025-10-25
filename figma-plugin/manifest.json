@@ -1,6 +1,6 @@
 {
-  "name": "Figma AI Buddy",
-  "id": "figma-ai-buddy",
+  "name": "Design System & Accessibility Audit",
+  "id": "figma-design-audit",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
@@ -9,6 +9,11 @@
   "editorType": [
     "figma"
   ],
+  "networkAccess": {
+    "allowedDomains": [
+      "https://buddy-lac-five.vercel.app"
+    ]
+  },
   "permissions": [
     "currentuser"
   ]
