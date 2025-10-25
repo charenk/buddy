@@ -323,12 +323,15 @@ async function createAuditComments(frame, issues, auditType) {
   }
   
   if (!canCreateComments) {
-    // Fallback: show detailed results in UI
+    // Fallback: create visual bubble frames
+    await createVisualBubbles(frame, issues, auditType);
+    
+    // Also show detailed results in UI
     figma.ui.postMessage({
       type: 'audit-results-detailed',
       auditType: auditType,
       issues: issues,
-      message: `Comments not available. Showing ${issues.length} issues in plugin UI.`
+      message: `Comments not available. Created ${issues.length} visual bubbles on canvas.`
     });
     return;
   }
@@ -375,6 +378,128 @@ async function createAuditComments(frame, issues, auditType) {
       console.error('Error creating comment:', error);
     }
   }
+}
+
+/**
+ * Create visual bubble frames for audit issues
+ */
+async function createVisualBubbles(frame, issues, auditType) {
+  console.log(`Creating ${issues.length} visual bubbles for ${auditType} audit`);
+  
+  // Create a container frame for all bubbles
+  const container = figma.createFrame();
+  container.name = `Audit Results - ${auditType.toUpperCase()}`;
+  container.fills = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 0 } }]; // Transparent
+  container.layoutMode = 'VERTICAL';
+  container.primaryAxisAlignItems = 'MIN';
+  container.counterAxisAlignItems = 'MIN';
+  container.itemSpacing = 12;
+  container.paddingTop = 20;
+  container.paddingBottom = 20;
+  container.paddingLeft = 20;
+  container.paddingRight = 20;
+  
+  // Position container next to the audited frame
+  container.x = frame.x + frame.width + 30;
+  container.y = frame.y;
+  
+  for (let i = 0; i < issues.length; i++) {
+    const issue = issues[i];
+    
+    // Create bubble frame
+    const bubble = figma.createFrame();
+    bubble.name = `Issue ${i + 1}: ${issue.type}`;
+    
+    // Style the bubble
+    const severityColors = {
+      'error': { r: 0.2, g: 0.1, b: 0.1 }, // Dark red
+      'warning': { r: 0.2, g: 0.15, b: 0.1 }, // Dark orange
+      'info': { r: 0.1, g: 0.15, b: 0.2 } // Dark blue
+    };
+    
+    bubble.fills = [{
+      type: 'SOLID',
+      color: severityColors[issue.severity] || severityColors['info']
+    }];
+    
+    bubble.cornerRadius = 12;
+    bubble.layoutMode = 'VERTICAL';
+    bubble.primaryAxisAlignItems = 'MIN';
+    bubble.counterAxisAlignItems = 'MIN';
+    bubble.itemSpacing = 8;
+    bubble.paddingTop = 12;
+    bubble.paddingBottom = 12;
+    bubble.paddingLeft = 16;
+    bubble.paddingRight = 16;
+    bubble.resize(280, 1); // Auto height
+    
+    // Create header with icon and type
+    const header = figma.createFrame();
+    header.name = 'Header';
+    header.fills = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 0 } }];
+    header.layoutMode = 'HORIZONTAL';
+    header.primaryAxisAlignItems = 'MIN';
+    header.counterAxisAlignItems = 'CENTER';
+    header.itemSpacing = 8;
+    header.resize(248, 1);
+    
+    // Icon text
+    const iconText = figma.createText();
+    iconText.characters = getIssueIcon(issue.type, issue.severity);
+    iconText.fontSize = 16;
+    iconText.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+    iconText.resize(20, 20);
+    
+    // Type text
+    const typeText = figma.createText();
+    typeText.characters = issue.type.toUpperCase();
+    typeText.fontSize = 12;
+    typeText.fontWeight = 600;
+    typeText.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+    typeText.resize(100, 16);
+    
+    // Severity badge
+    const severityText = figma.createText();
+    severityText.characters = issue.severity.toUpperCase();
+    severityText.fontSize = 10;
+    severityText.fontWeight = 600;
+    severityText.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+    severityText.resize(60, 14);
+    
+    // Add elements to header
+    header.appendChild(iconText);
+    header.appendChild(typeText);
+    header.appendChild(severityText);
+    
+    // Create message text
+    const messageText = figma.createText();
+    messageText.characters = issue.message;
+    messageText.fontSize = 11;
+    messageText.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+    messageText.resize(248, 1);
+    messageText.textAutoResize = 'HEIGHT';
+    
+    // Create suggestion text
+    const suggestionText = figma.createText();
+    suggestionText.characters = `💡 Suggestion: ${issue.suggestion}`;
+    suggestionText.fontSize = 10;
+    suggestionText.fills = [{ type: 'SOLID', color: { r: 0.7, g: 0.7, b: 0.7 } }];
+    suggestionText.resize(248, 1);
+    suggestionText.textAutoResize = 'HEIGHT';
+    
+    // Add elements to bubble
+    bubble.appendChild(header);
+    bubble.appendChild(messageText);
+    bubble.appendChild(suggestionText);
+    
+    // Add bubble to container
+    container.appendChild(bubble);
+  }
+  
+  // Add container to the page
+  figma.currentPage.appendChild(container);
+  
+  console.log(`Created visual bubble container with ${issues.length} bubbles`);
 }
 
 /**
