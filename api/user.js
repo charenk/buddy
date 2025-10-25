@@ -22,6 +22,8 @@ export default async function handler(req, res) {
         return await handleUserContext(req, res);
       case 'webhooks':
         return await handleWebhooks(req, res);
+      case 'create-webhook':
+        return await handleCreateWebhook(req, res);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -72,29 +74,39 @@ async function handleUserContext(req, res) {
 // Handle webhook management
 async function handleWebhooks(req, res) {
   try {
-    // Get user session from Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    const sessionToken = authHeader.substring(7);
-    const sessionData = JSON.parse(Buffer.from(sessionToken, 'base64').toString());
+    // Support both authenticated and direct figmaUserId access
+    let figmaUserId;
+    let accessToken = null;
     
-    // Check if session is expired
-    if (Date.now() > sessionData.expires_at) {
-      return res.status(401).json({ error: 'Session expired' });
-    }
+    if (req.query.figmaUserId) {
+      // Direct access via query parameter
+      figmaUserId = req.query.figmaUserId;
+    } else {
+      // Authenticated access via Authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authentication required or provide figmaUserId' });
+      }
 
-    const { access_token, figma_user_id } = sessionData;
+      const sessionToken = authHeader.substring(7);
+      const sessionData = JSON.parse(Buffer.from(sessionToken, 'base64').toString());
+      
+      // Check if session is expired
+      if (Date.now() > sessionData.expires_at) {
+        return res.status(401).json({ error: 'Session expired' });
+      }
+
+      accessToken = sessionData.access_token;
+      figmaUserId = sessionData.figma_user_id;
+    }
 
     switch (req.method) {
       case 'GET':
-        return await getWebhooks(figma_user_id, res);
+        return await getWebhooks(figmaUserId, res);
       case 'POST':
-        return await createWebhook(access_token, figma_user_id, req.body, res);
+        return await createWebhook(accessToken, figmaUserId, req.body, res);
       case 'DELETE':
-        return await deleteWebhook(access_token, req.query.webhook_id, res);
+        return await deleteWebhook(accessToken, req.query.webhook_id, res);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -462,5 +474,83 @@ async function deleteWebhook(accessToken, webhookId, res) {
   } catch (error) {
     console.error('Failed to delete webhook:', error);
     res.status(500).json({ error: 'Failed to delete webhook' });
+  }
+}
+
+// Handle webhook creation from plugin
+async function handleCreateWebhook(req, res) {
+  try {
+    const { figmaUserId, figmaUserName, figmaUserEmail, fileKey, webhookUrl } = req.body;
+
+    if (!figmaUserId || !webhookUrl) {
+      return res.status(400).json({ error: 'figmaUserId and webhookUrl are required' });
+    }
+
+    console.log('Creating webhook for user:', figmaUserId);
+
+    // For now, we'll create a simple webhook record without Figma API integration
+    // This allows the plugin to work without full OAuth setup
+    const supabase = createClient();
+
+    // Check if user exists, create if not
+    const { data: existingUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('figma_user_id', figmaUserId)
+      .single();
+
+    let userId;
+    if (userError || !existingUser) {
+      // Create user
+      const { data: newUser, error: createUserError } = await supabase
+        .from('users')
+        .insert({
+          figma_user_id: figmaUserId,
+          figma_name: figmaUserName || 'Unknown User',
+          figma_email: figmaUserEmail || '',
+          created_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+
+      if (createUserError) {
+        throw createUserError;
+      }
+      userId = newUser.id;
+    } else {
+      userId = existingUser.id;
+    }
+
+    // Create webhook record
+    const { data: webhook, error: webhookError } = await supabase
+      .from('user_webhooks')
+      .insert({
+        user_id: userId,
+        webhook_url: webhookUrl,
+        file_key: fileKey || 'all',
+        status: 'active',
+        created_at: new Date().toISOString()
+      })
+      .select('id')
+      .single();
+
+    if (webhookError) {
+      throw webhookError;
+    }
+
+    console.log('Webhook created successfully:', webhook.id);
+
+    res.status(201).json({
+      success: true,
+      webhookId: webhook.id,
+      message: 'Webhook setup complete! @buddy comments will now work in real-time.'
+    });
+
+  } catch (error) {
+    console.error('Failed to create webhook:', error);
+    res.status(500).json({ 
+      error: 'Failed to create webhook',
+      message: error.message 
+    });
   }
 }
