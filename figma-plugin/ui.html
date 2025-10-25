@@ -422,14 +422,12 @@
         // First check if API is accessible
         showMessage('Checking API availability...', 'success');
         
-        const testResponse = await fetch(`${API_BASE}/api/figma-plugin`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ test: true })
+        const testResponse = await fetch(`${API_BASE}/api/auth?action=figma-oauth`, {
+          method: 'GET'
         });
         
         if (!testResponse.ok) {
-          showMessage('❌ API not deployed yet. Please deploy the API first using: npx vercel --prod', 'error');
+          showMessage('❌ API not accessible. Please check deployment status.', 'error');
           return;
         }
         
