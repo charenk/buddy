@@ -389,7 +389,7 @@ async function createVisualBubbles(frame, issues, auditType) {
   // Create a container frame for all bubbles
   const container = figma.createFrame();
   container.name = `Audit Results - ${auditType.toUpperCase()}`;
-  container.fills = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 0 } }]; // Transparent
+  container.fills = []; // Transparent
   container.layoutMode = 'VERTICAL';
   container.primaryAxisAlignItems = 'MIN';
   container.counterAxisAlignItems = 'MIN';
@@ -436,7 +436,7 @@ async function createVisualBubbles(frame, issues, auditType) {
     // Create header with icon and type
     const header = figma.createFrame();
     header.name = 'Header';
-    header.fills = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 0 } }];
+    header.fills = []; // Transparent
     header.layoutMode = 'HORIZONTAL';
     header.primaryAxisAlignItems = 'MIN';
     header.counterAxisAlignItems = 'CENTER';
