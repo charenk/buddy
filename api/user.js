@@ -507,7 +507,6 @@ async function handleCreateWebhook(req, res) {
         .insert({
           figma_user_id: figmaUserId,
           figma_name: figmaUserName || 'Unknown User',
-          figma_email: figmaUserEmail || '',
           created_at: new Date().toISOString()
         })
         .select('id')

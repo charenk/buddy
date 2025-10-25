@@ -46,7 +46,7 @@ async function setupWebhook() {
     }
 
     // Send webhook setup request to backend
-    const response = await fetch('https://buddy-r9tqwmm3o-charenkoneti-cyberqpcoms-projects.vercel.app/api/user?action=create-webhook', {
+    const response = await fetch('https://buddy-lac-five.vercel.app/api/user?action=create-webhook', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ async function setupWebhook() {
         figmaUserName: user.name,
         figmaUserEmail: user.email,
         fileKey: figma.fileKey,
-        webhookUrl: 'https://buddy-r9tqwmm3o-charenkoneti-cyberqpcoms-projects.vercel.app/api/figma-comment-webhook'
+        webhookUrl: 'https://buddy-lac-five.vercel.app/api/figma-comment-webhook'
       })
     });
 
@@ -92,7 +92,7 @@ async function checkWebhookStatus() {
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(`https://buddy-r9tqwmm3o-charenkoneti-cyberqpcoms-projects.vercel.app/api/user?action=webhooks&figmaUserId=${user.id}`);
+    const response = await fetch(`https://buddy-lac-five.vercel.app/api/user?action=webhooks&figmaUserId=${user.id}`);
     
     if (!response.ok) {
       throw new Error('Failed to check webhook status');
