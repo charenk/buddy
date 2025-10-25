@@ -56,7 +56,7 @@ async function performAccessibilityAudit(msg) {
     const frameData = await extractFrameData(frame);
     
     // Send to backend for analysis
-    const response = await fetch('https://buddy-lac-five.vercel.app/api/audit', {
+    const response = await fetch('https://buddy-fz1y2s7ml-charenkoneti-cyberqpcoms-projects.vercel.app/api/audit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ async function performDesignSystemAudit(msg) {
     const frameData = await extractFrameData(frame);
     
     // Send to backend for analysis
-    const response = await fetch('https://buddy-lac-five.vercel.app/api/audit', {
+    const response = await fetch('https://buddy-fz1y2s7ml-charenkoneti-cyberqpcoms-projects.vercel.app/api/audit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -175,7 +175,7 @@ async function performBothAudits(msg) {
     const frameData = await extractFrameData(frame);
     
     // Send to backend for analysis
-    const response = await fetch('https://buddy-lac-five.vercel.app/api/audit', {
+    const response = await fetch('https://buddy-fz1y2s7ml-charenkoneti-cyberqpcoms-projects.vercel.app/api/audit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -227,7 +227,7 @@ async function getTeamConfiguration(msg) {
   try {
     const { teamId } = msg;
     
-    const response = await fetch(`https://buddy-lac-five.vercel.app/api/config?action=get&teamId=${teamId}`);
+    const response = await fetch(`https://buddy-fz1y2s7ml-charenkoneti-cyberqpcoms-projects.vercel.app/api/config?action=get&teamId=${teamId}`);
     
     if (!response.ok) {
       throw new Error('Failed to get configuration');
