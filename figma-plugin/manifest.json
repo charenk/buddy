@@ -9,11 +9,6 @@
   "editorType": [
     "figma"
   ],
-  "networkAccess": {
-    "allowedDomains": [
-      "https://buddy-lac-five.vercel.app"
-    ]
-  },
   "permissions": [
     "currentuser"
   ]
