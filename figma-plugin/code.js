@@ -65,7 +65,7 @@ async function performAccessibilityAudit(msg) {
         auditType: 'accessibility',
         frameData: frameData,
         teamId: teamId,
-        userId: figma.currentUser?.id,
+        userId: figma.currentUser ? figma.currentUser.id : null,
         customRules: customRules
       })
     });
@@ -125,7 +125,7 @@ async function performDesignSystemAudit(msg) {
         auditType: 'design-system',
         frameData: frameData,
         teamId: teamId,
-        userId: figma.currentUser?.id
+        userId: figma.currentUser ? figma.currentUser.id : null
       })
     });
 
@@ -184,7 +184,7 @@ async function performBothAudits(msg) {
         auditType: 'both',
         frameData: frameData,
         teamId: teamId,
-        userId: figma.currentUser?.id,
+        userId: figma.currentUser ? figma.currentUser.id : null,
         customRules: customRules
       })
     });
