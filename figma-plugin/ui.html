@@ -659,12 +659,76 @@
         showMessage(msg.message, 'success');
         document.getElementById('audit-status').textContent = `Audit complete! Found ${msg.issueCount} issues.`;
         document.getElementById('audit-status').className = 'status success';
+      } else if (msg.type === 'audit-results-detailed') {
+        // Show detailed results when comments aren't available
+        showDetailedResults(msg.issues, msg.auditType);
+        showMessage(msg.message, 'warning');
+        document.getElementById('audit-status').textContent = `Found ${msg.issues.length} issues (shown in UI)`;
+        document.getElementById('audit-status').className = 'status warning';
       } else if (msg.type === 'error') {
         showMessage('❌ ' + msg.message, 'error');
         document.getElementById('audit-status').textContent = 'Audit failed. Please try again.';
         document.getElementById('audit-status').className = 'status error';
       }
     };
+
+    // Show detailed audit results when comments aren't available
+    function showDetailedResults(issues, auditType) {
+      let issuesHtml = '';
+      issues.forEach((issue, index) => {
+        const icon = getIssueIcon(issue.type, issue.severity);
+        const wcagRef = issue.wcagCriterion ? ` (WCAG ${issue.wcagCriterion})` : '';
+        
+        issuesHtml += `
+          <div class="issue-item" style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 10px; margin-bottom: 8px;">
+            <div class="issue-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span class="issue-icon">${icon}</span>
+              <span class="issue-type" style="font-weight: 600; color: #ffffff;">${issue.type.toUpperCase()}</span>
+              <span class="issue-severity ${issue.severity}" style="padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; ${getSeverityStyle(issue.severity)}">${issue.severity.toUpperCase()}</span>
+              ${wcagRef ? `<span class="wcag-ref" style="color: #a0a0a0; font-size: 11px;">${wcagRef}</span>` : ''}
+            </div>
+            <div class="issue-message" style="color: #e0e0e0; margin-bottom: 6px; font-size: 13px;">${issue.message}</div>
+            <div class="issue-suggestion" style="color: #a0a0a0; font-size: 12px;"><strong>Suggestion:</strong> ${issue.suggestion}</div>
+          </div>
+        `;
+      });
+      
+      document.getElementById('audit-results').innerHTML = `
+        <div class="audit-summary">
+          <h4>Detailed Audit Results (${auditType.toUpperCase()})</h4>
+          <div class="issues-list">
+            ${issuesHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    // Get icon for issue type and severity
+    function getIssueIcon(type, severity) {
+      const icons = {
+        'contrast': '🎨',
+        'text-size': '📝',
+        'touch-target': '👆',
+        'alt-text': '🖼️',
+        'focus': '⌨️',
+        'color': '🎨',
+        'spacing': '📏',
+        'typography': '✍️',
+        'layout': '📐',
+        'component': '🧩'
+      };
+      return icons[type] || '⚠️';
+    }
+
+    // Get CSS style for severity
+    function getSeverityStyle(severity) {
+      const styles = {
+        'error': 'background: #3a1e1e; color: #f87171; border: 1px solid #ef4444;',
+        'warning': 'background: #3a2e1e; color: #fbbf24; border: 1px solid #f59e0b;',
+        'info': 'background: #1e2a3a; color: #60a5fa; border: 1px solid #3b82f6;'
+      };
+      return styles[severity] || styles['info'];
+    }
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', initPlugin);

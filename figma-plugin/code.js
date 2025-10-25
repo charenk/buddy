@@ -312,6 +312,27 @@ async function extractFrameData(frame) {
 async function createAuditComments(frame, issues, auditType) {
   console.log(`Creating ${issues.length} comments for ${auditType} audit`);
   
+  // Check if we can create comments at all
+  let canCreateComments = true;
+  try {
+    const testComment = figma.createComment();
+    testComment.remove(); // Remove the test comment
+  } catch (error) {
+    console.log('Comments not available:', error.message);
+    canCreateComments = false;
+  }
+  
+  if (!canCreateComments) {
+    // Fallback: show detailed results in UI
+    figma.ui.postMessage({
+      type: 'audit-results-detailed',
+      auditType: auditType,
+      issues: issues,
+      message: `Comments not available. Showing ${issues.length} issues in plugin UI.`
+    });
+    return;
+  }
+  
   for (const issue of issues) {
     try {
       // Find the target element for the comment
